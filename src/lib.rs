@@ -246,9 +246,30 @@ impl Default for GameState {
     }
 }
 
+fn asset(sprite: Vec2, location: Vec2) {
+    asset_with_opacity(sprite, location, 1.0)
+}
+
+#[allow(clippy::neg_multiply)]
+fn asset_with_opacity(sprite: Vec2, location: Vec2, opacity: f32) {
+    sprite!(
+        "assets",
+        x = CELL_SIZE * location.x,
+        y = CELL_SIZE * location.y,
+        w = CELL_SIZE,
+        h = CELL_SIZE,
+        sw = CELL_SIZE,
+        sh = CELL_SIZE,
+        sx = sprite.x * 16,
+        sy = sprite.y * 16,
+        opacity = opacity
+    );
+}
+
 fn update(mut state: GameState) -> GameState {
     state.grid.iter().enumerate().for_each(|(row_index, row)| {
         row.iter().enumerate().for_each(|(column_index, cell)| {
+            let location = vec2(row_index, column_index);
             rect!(
                 w = CELL_SIZE,
                 h = CELL_SIZE,
@@ -259,40 +280,34 @@ fn update(mut state: GameState) -> GameState {
 
             match cell.item {
                 Item::None => {}
-                Item::Body => {
-                    rect!(
-                        w = CELL_SIZE,
-                        h = CELL_SIZE,
-                        x = CELL_SIZE * row_index,
-                        y = CELL_SIZE * column_index,
-                        color = 0x0000ffff
-                    );
-                }
+                Item::Body => asset(vec2(8, 0), location),
             }
 
             if cell.blood_level != BloodLevel::None {
-                let diameter = match cell.blood_level {
+                match cell.blood_level {
                     BloodLevel::None => unreachable!(),
-                    BloodLevel::Tall => 4,
-                    BloodLevel::Grande => 8,
-                    BloodLevel::Venti => 14,
+                    BloodLevel::Tall => asset_with_opacity(vec2(7, 1), location, 0.3),
+                    BloodLevel::Grande => {
+                        let diameter = match cell.blood_level {
+                            BloodLevel::None => unreachable!(),
+                            BloodLevel::Tall => 4,
+                            BloodLevel::Grande => 8,
+                            BloodLevel::Venti => 14,
+                        };
+
+                        circ!(
+                            x = CELL_SIZE * row_index + CELL_SIZE / 2 - diameter / 2,
+                            y = CELL_SIZE * column_index + CELL_SIZE / 2 - diameter / 2,
+                            d = diameter,
+                            color = 0xff000077
+                        );
+                    }
+                    BloodLevel::Venti => asset_with_opacity(vec2(5, 1), location, 0.3),
                 };
-                circ!(
-                    x = CELL_SIZE * row_index + CELL_SIZE / 2 - diameter / 2,
-                    y = CELL_SIZE * column_index + CELL_SIZE / 2 - diameter / 2,
-                    d = diameter,
-                    color = 0xff000077
-                );
             }
 
             if cell.player {
-                rect!(
-                    w = CELL_SIZE,
-                    h = CELL_SIZE,
-                    x = CELL_SIZE * row_index,
-                    y = CELL_SIZE * column_index,
-                    color = 0xff4f00ff
-                );
+                asset(vec2(4, 0), location);
             }
         })
     });
