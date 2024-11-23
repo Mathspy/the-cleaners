@@ -1,8 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
 
-// This is where your main game loop code goes
-// The stuff in this block will run ~60x per sec
-
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
 
