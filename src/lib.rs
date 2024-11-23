@@ -246,24 +246,52 @@ impl Default for GameState {
     }
 }
 
-fn asset(sprite: Vec2, location: Vec2) {
-    asset_with_opacity(sprite, location, 1.0)
+#[must_use]
+struct Asset {
+    sprite: Vec2,
+    location: Vec2,
+    opacity: f32,
+    flip_x: bool,
 }
 
-#[allow(clippy::neg_multiply)]
-fn asset_with_opacity(sprite: Vec2, location: Vec2, opacity: f32) {
-    sprite!(
-        "assets",
-        x = CELL_SIZE * location.x,
-        y = CELL_SIZE * location.y,
-        w = CELL_SIZE,
-        h = CELL_SIZE,
-        sw = CELL_SIZE,
-        sh = CELL_SIZE,
-        sx = sprite.x * 16,
-        sy = sprite.y * 16,
-        opacity = opacity
-    );
+fn asset(sprite: Vec2, location: Vec2) -> Asset {
+    Asset::new(sprite, location)
+}
+
+impl Asset {
+    fn new(sprite: Vec2, location: Vec2) -> Asset {
+        Asset {
+            sprite,
+            location,
+            opacity: 1.0,
+            flip_x: false,
+        }
+    }
+
+    #[allow(clippy::neg_multiply)]
+    fn draw(self) {
+        sprite!(
+            "assets",
+            x = CELL_SIZE * self.location.x,
+            y = CELL_SIZE * self.location.y,
+            w = CELL_SIZE,
+            h = CELL_SIZE,
+            sw = CELL_SIZE,
+            sh = CELL_SIZE,
+            sx = self.sprite.x * 16,
+            sy = self.sprite.y * 16,
+            opacity = self.opacity,
+            flip_x = self.flip_x
+        );
+    }
+
+    fn opacity(self, opacity: f32) -> Asset {
+        Asset { opacity, ..self }
+    }
+
+    fn flip_x(self, flip_x: bool) -> Asset {
+        Asset { flip_x, ..self }
+    }
 }
 
 fn update(mut state: GameState) -> GameState {
@@ -280,13 +308,13 @@ fn update(mut state: GameState) -> GameState {
 
             match cell.item {
                 Item::None => {}
-                Item::Body => asset(vec2(8, 0), location),
+                Item::Body => asset(vec2(8, 0), location).draw(),
             }
 
             if cell.blood_level != BloodLevel::None {
                 match cell.blood_level {
                     BloodLevel::None => unreachable!(),
-                    BloodLevel::Tall => asset_with_opacity(vec2(7, 1), location, 0.3),
+                    BloodLevel::Tall => asset(vec2(7, 1), location).opacity(0.3).draw(),
                     BloodLevel::Grande => {
                         let diameter = match cell.blood_level {
                             BloodLevel::None => unreachable!(),
