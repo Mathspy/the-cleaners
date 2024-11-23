@@ -14,6 +14,10 @@ struct Vec2 {
     y: usize,
 }
 
+fn vec2(x: usize, y: usize) -> Vec2 {
+    Vec2 { x, y }
+}
+
 impl Vec2 {
     fn new() -> Self {
         Default::default()
@@ -45,16 +49,36 @@ impl From<&TileBackground> for u32 {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
-enum TileForeground {
-    Empty,
-    Player,
+enum Item {
+    None,
     Body,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum BloodLevel {
+    None,
+    Tall,
+    Grande,
+    Venti,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 struct Tile {
     background: TileBackground,
-    foreground: TileForeground,
+    item: Item,
+    player: bool,
+    blood_level: BloodLevel,
+}
+
+impl Tile {
+    fn from_background(background: TileBackground) -> Tile {
+        Tile {
+            background,
+            item: Item::None,
+            player: false,
+            blood_level: BloodLevel::None,
+        }
+    }
 }
 
 enum Parity {
@@ -73,10 +97,64 @@ impl From<u32> for Parity {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+struct Grid(Vec<Vec<Tile>>);
+
+impl Grid {
+    fn new() -> Self {
+        Grid(
+            (0..20)
+                .map(|x| {
+                    let start_with = if matches!(Parity::from(x), Parity::Even) {
+                        TileBackground::Black
+                    } else {
+                        TileBackground::White
+                    };
+
+                    (0..20)
+                        .map(|y| {
+                            let parity = Parity::from(y);
+
+                            match parity {
+                                Parity::Even => Tile::from_background(start_with.flip()),
+                                Parity::Odd => Tile::from_background(start_with),
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    fn iter(&self) -> std::slice::Iter<'_, Vec<Tile>> {
+        self.0.iter()
+    }
+}
+
+impl std::ops::Index<Vec2> for Grid {
+    type Output = Tile;
+
+    fn index(&self, index: Vec2) -> &Self::Output {
+        &self.0[index.x][index.y]
+    }
+}
+
+impl std::ops::IndexMut<Vec2> for Grid {
+    fn index_mut(&mut self, index: Vec2) -> &mut Self::Output {
+        &mut self.0[index.x][index.y]
+    }
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
 struct GameState {
-    grid: Vec<Vec<Tile>>,
-    character_position: Vec2,
+    // Gameplay:
+    grid: Grid,
+    blood_on_boots: BloodLevel,
+
+    // Restrictions:
     disable_move_until: usize,
+
+    // Performance:
+    character_position: Vec2,
 }
 
 enum Direction {
@@ -97,44 +175,21 @@ impl GameState {
         };
         let new_position = self.character_position;
 
-        self.grid[previous_position.x][previous_position.y].foreground = TileForeground::Empty;
-        self.grid[new_position.x][new_position.y].foreground = TileForeground::Player
+        self.grid[previous_position].player = false;
+        self.grid[new_position].player = true
     }
 }
 
 impl Default for GameState {
     fn default() -> Self {
-        let mut grid = (0..20)
-            .map(|x| {
-                let start_with = if matches!(Parity::from(x), Parity::Even) {
-                    TileBackground::Black
-                } else {
-                    TileBackground::White
-                };
+        let mut grid = Grid::new();
 
-                (0..20)
-                    .map(|y| {
-                        let parity = Parity::from(y);
-
-                        match parity {
-                            Parity::Even => Tile {
-                                background: start_with.flip(),
-                                foreground: TileForeground::Empty,
-                            },
-                            Parity::Odd => Tile {
-                                background: start_with,
-                                foreground: TileForeground::Empty,
-                            },
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-
-        grid[0][0].foreground = TileForeground::Player;
+        grid[vec2(0, 0)].player = true;
+        grid[vec2(3, 3)].item = Item::Body;
 
         GameState {
             grid,
+            blood_on_boots: BloodLevel::None,
             character_position: Vec2::new(),
             disable_move_until: 0,
         }
@@ -152,18 +207,26 @@ fn update(mut state: GameState) -> GameState {
                 color = u32::from(&cell.background)
             );
 
-            match cell.foreground {
-                TileForeground::Empty => {}
-                TileForeground::Player => {
+            match cell.item {
+                Item::None => {}
+                Item::Body => {
                     rect!(
                         w = 16,
                         h = 16,
                         x = 16 * row_index,
                         y = 16 * column_index,
-                        color = 0xff4f00ff
+                        color = 0x0000ffff
                     );
                 }
-                TileForeground::Body => todo!(),
+            }
+            if cell.player {
+                rect!(
+                    w = 16,
+                    h = 16,
+                    x = 16 * row_index,
+                    y = 16 * column_index,
+                    color = 0xff4f00ff
+                );
             }
         })
     });
