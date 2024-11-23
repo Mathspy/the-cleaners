@@ -6,6 +6,7 @@
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
 
+const CELL_SIZE: usize = 16;
 const FRAMES_BETWEEN_MOVES: usize = 16;
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy, Default)]
@@ -60,6 +61,46 @@ enum BloodLevel {
     Tall,
     Grande,
     Venti,
+}
+
+impl BloodLevel {
+    /// Returns whether incrementing succeeded or not
+    fn increment(&mut self) -> bool {
+        match self {
+            BloodLevel::None => {
+                *self = BloodLevel::Tall;
+                true
+            }
+            BloodLevel::Tall => {
+                *self = BloodLevel::Grande;
+                true
+            }
+            BloodLevel::Grande => {
+                *self = BloodLevel::Venti;
+                true
+            }
+            BloodLevel::Venti => false,
+        }
+    }
+
+    /// Returns whether decrementing succeeded or not
+    fn decrement(&mut self) -> bool {
+        match self {
+            BloodLevel::None => false,
+            BloodLevel::Tall => {
+                *self = BloodLevel::None;
+                true
+            }
+            BloodLevel::Grande => {
+                *self = BloodLevel::Tall;
+                true
+            }
+            BloodLevel::Venti => {
+                *self = BloodLevel::Grande;
+                true
+            }
+        }
+    }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
@@ -175,6 +216,18 @@ impl GameState {
         };
         let new_position = self.character_position;
 
+        if self.grid[new_position].item == Item::Body {
+            self.grid[new_position].blood_level = BloodLevel::Venti;
+            self.blood_on_boots = BloodLevel::Venti;
+        }
+
+        if self.blood_on_boots != BloodLevel::None {
+            let some_blood_drained = self.grid[new_position].blood_level.increment();
+            if some_blood_drained {
+                self.blood_on_boots.decrement();
+            }
+        }
+
         self.grid[previous_position].player = false;
         self.grid[new_position].player = true
     }
@@ -200,10 +253,10 @@ fn update(mut state: GameState) -> GameState {
     state.grid.iter().enumerate().for_each(|(row_index, row)| {
         row.iter().enumerate().for_each(|(column_index, cell)| {
             rect!(
-                w = 16,
-                h = 16,
-                x = 16 * row_index,
-                y = 16 * column_index,
+                w = CELL_SIZE,
+                h = CELL_SIZE,
+                x = CELL_SIZE * row_index,
+                y = CELL_SIZE * column_index,
                 color = u32::from(&cell.background)
             );
 
@@ -211,20 +264,36 @@ fn update(mut state: GameState) -> GameState {
                 Item::None => {}
                 Item::Body => {
                     rect!(
-                        w = 16,
-                        h = 16,
-                        x = 16 * row_index,
-                        y = 16 * column_index,
+                        w = CELL_SIZE,
+                        h = CELL_SIZE,
+                        x = CELL_SIZE * row_index,
+                        y = CELL_SIZE * column_index,
                         color = 0x0000ffff
                     );
                 }
             }
+
+            if cell.blood_level != BloodLevel::None {
+                let diameter = match cell.blood_level {
+                    BloodLevel::None => unreachable!(),
+                    BloodLevel::Tall => 4,
+                    BloodLevel::Grande => 8,
+                    BloodLevel::Venti => 14,
+                };
+                circ!(
+                    x = CELL_SIZE * row_index + CELL_SIZE / 2 - diameter / 2,
+                    y = CELL_SIZE * column_index + CELL_SIZE / 2 - diameter / 2,
+                    d = diameter,
+                    color = 0xff000077
+                );
+            }
+
             if cell.player {
                 rect!(
-                    w = 16,
-                    h = 16,
-                    x = 16 * row_index,
-                    y = 16 * column_index,
+                    w = CELL_SIZE,
+                    h = CELL_SIZE,
+                    x = CELL_SIZE * row_index,
+                    y = CELL_SIZE * column_index,
                     color = 0xff4f00ff
                 );
             }
