@@ -37,7 +37,7 @@ fn inner_update() {
     }
 }
 
-#[cfg(not(no_run))]
+// #[cfg(not(no_run))]
 #[no_mangle]
 #[allow(overflowing_literals, non_upper_case_globals)]
 // # Safety: builtin turbo function run
@@ -45,13 +45,13 @@ pub unsafe extern "C" fn run() {
     inner_update()
 }
 
-#[cfg(no_run)]
-#[allow(overflowing_literals, non_upper_case_globals)]
-unsafe fn run() {
-    inner_update()
-}
+// #[cfg(no_run)]
+// #[allow(overflowing_literals, non_upper_case_globals)]
+// unsafe fn run() {
+//     inner_update()
+// }
 
-#[cfg(not(no_run))]
+// #[cfg(not(no_run))]
 pub fn run_snapshot(snapshot_data: &[u8]) -> Vec<u8> {
     turbo::run_snapshot(snapshot_data, || unsafe { run() })
 }
