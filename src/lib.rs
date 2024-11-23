@@ -6,13 +6,40 @@ use turbo::prelude::*;
 const CELL_SIZE: usize = 16;
 const FRAMES_BETWEEN_MOVES: usize = 16;
 
+struct CharacterSpriteLocations {
+    down: Vec2,
+    right: Vec2,
+    up: Vec2,
+}
+
+const THE_CAT: CharacterSpriteLocations = CharacterSpriteLocations {
+    down: vec2(4, 0),
+    right: vec2(4, 5),
+    up: vec2(5, 5),
+};
+// const TWO_TOES: CharacterSpriteLocations = CharacterSpriteLocations {
+//     down: vec2(5, 0),
+//     right: vec2(6, 5),
+//     up: vec2(7, 5),
+// };
+// const MACHINE_GUN: CharacterSpriteLocations = CharacterSpriteLocations {
+//     down: vec2(6, 0),
+//     right: vec2(8, 5),
+//     up: vec2(9, 5),
+// };
+// const ONE_EYE: CharacterSpriteLocations = CharacterSpriteLocations {
+//     down: vec2(7, 0),
+//     right: vec2(10, 5),
+//     up: vec2(11, 5),
+// };
+
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy, Default)]
 struct Vec2 {
     x: usize,
     y: usize,
 }
 
-fn vec2(x: usize, y: usize) -> Vec2 {
+const fn vec2(x: usize, y: usize) -> Vec2 {
     Vec2 { x, y }
 }
 
@@ -187,6 +214,7 @@ struct GameState {
     // Gameplay:
     grid: Grid,
     blood_on_boots: BloodLevel,
+    facing: Direction,
 
     // Restrictions:
     disable_move_until: usize,
@@ -195,6 +223,7 @@ struct GameState {
     character_position: Vec2,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
 enum Direction {
     Up,
     Down,
@@ -206,10 +235,22 @@ impl GameState {
     fn move_player(&mut self, direction: Direction) {
         let previous_position = self.character_position;
         match direction {
-            Direction::Up => self.character_position.y -= 1,
-            Direction::Down => self.character_position.y += 1,
-            Direction::Left => self.character_position.x -= 1,
-            Direction::Right => self.character_position.x += 1,
+            Direction::Up => {
+                self.facing = direction;
+                self.character_position.y -= 1;
+            }
+            Direction::Down => {
+                self.facing = direction;
+                self.character_position.y += 1;
+            }
+            Direction::Left => {
+                self.facing = direction;
+                self.character_position.x -= 1;
+            }
+            Direction::Right => {
+                self.facing = direction;
+                self.character_position.x += 1;
+            }
         };
         let new_position = self.character_position;
 
@@ -240,6 +281,7 @@ impl Default for GameState {
         GameState {
             grid,
             blood_on_boots: BloodLevel::None,
+            facing: Direction::Down,
             character_position: Vec2::new(),
             disable_move_until: 0,
         }
@@ -330,12 +372,19 @@ fn update(mut state: GameState) -> GameState {
                             color = 0xff000077
                         );
                     }
-                    BloodLevel::Venti => asset_with_opacity(vec2(5, 1), location, 0.3),
+                    BloodLevel::Venti => asset(vec2(5, 1), location).opacity(0.3).draw(),
                 };
             }
 
             if cell.player {
-                asset(vec2(4, 0), location);
+                let character_sprite_locations = THE_CAT;
+                let (sprite, flip) = match state.facing {
+                    Direction::Up => (character_sprite_locations.up, false),
+                    Direction::Down => (character_sprite_locations.down, false),
+                    Direction::Left => (character_sprite_locations.right, true),
+                    Direction::Right => (character_sprite_locations.right, false),
+                };
+                asset(sprite, location).flip_x(flip).draw();
             }
         })
     });
