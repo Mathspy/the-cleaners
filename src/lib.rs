@@ -8,28 +8,53 @@ use turbo::prelude::*;
 
 const FRAMES_BETWEEN_MOVES: usize = 16;
 
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy, Default)]
+struct Vec2 {
+    x: usize,
+    y: usize,
+}
+
+impl Vec2 {
+    fn new() -> Self {
+        Default::default()
+    }
+}
+
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
-enum Tile {
+enum TileBackground {
     Black,
     White,
 }
 
-impl Tile {
+impl TileBackground {
     fn flip(self) -> Self {
         match self {
-            Tile::Black => Tile::White,
-            Tile::White => Tile::Black,
+            TileBackground::Black => TileBackground::White,
+            TileBackground::White => TileBackground::Black,
         }
     }
 }
 
-impl From<&Tile> for u32 {
-    fn from(value: &Tile) -> Self {
+impl From<&TileBackground> for u32 {
+    fn from(value: &TileBackground) -> Self {
         match value {
-            Tile::Black => 0x111111ff,
-            Tile::White => 0xffffffff,
+            TileBackground::Black => 0x111111ff,
+            TileBackground::White => 0xffffffff,
         }
     }
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum TileForeground {
+    Empty,
+    Player,
+    Body,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+struct Tile {
+    background: TileBackground,
+    foreground: TileForeground,
 }
 
 enum Parity {
@@ -50,18 +75,41 @@ impl From<u32> for Parity {
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
 struct GameState {
     grid: Vec<Vec<Tile>>,
-    character_position: (u32, u32),
+    character_position: Vec2,
     disable_move_until: usize,
+}
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl GameState {
+    fn move_player(&mut self, direction: Direction) {
+        let previous_position = self.character_position;
+        match direction {
+            Direction::Up => self.character_position.y -= 1,
+            Direction::Down => self.character_position.y += 1,
+            Direction::Left => self.character_position.x -= 1,
+            Direction::Right => self.character_position.x += 1,
+        };
+        let new_position = self.character_position;
+
+        self.grid[previous_position.x][previous_position.y].foreground = TileForeground::Empty;
+        self.grid[new_position.x][new_position.y].foreground = TileForeground::Player
+    }
 }
 
 impl Default for GameState {
     fn default() -> Self {
-        let grid = (0..20)
+        let mut grid = (0..20)
             .map(|x| {
                 let start_with = if matches!(Parity::from(x), Parity::Even) {
-                    Tile::Black
+                    TileBackground::Black
                 } else {
-                    Tile::White
+                    TileBackground::White
                 };
 
                 (0..20)
@@ -69,76 +117,88 @@ impl Default for GameState {
                         let parity = Parity::from(y);
 
                         match parity {
-                            Parity::Even => start_with.flip(),
-                            Parity::Odd => start_with,
+                            Parity::Even => Tile {
+                                background: start_with.flip(),
+                                foreground: TileForeground::Empty,
+                            },
+                            Parity::Odd => Tile {
+                                background: start_with,
+                                foreground: TileForeground::Empty,
+                            },
                         }
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             })
-            .collect();
+            .collect::<Vec<_>>();
+
+        grid[0][0].foreground = TileForeground::Player;
 
         GameState {
             grid,
-            character_position: (0, 0),
+            character_position: Vec2::new(),
             disable_move_until: 0,
         }
     }
 }
 
 fn update(mut state: GameState) -> GameState {
-    state
-        .grid
-        .iter()
-        .enumerate()
-        .for_each(|(column_index, row)| {
-            row.iter().enumerate().for_each(|(row_index, cell)| {
-                rect!(
-                    w = 16,
-                    h = 16,
-                    x = 16 * row_index,
-                    y = 16 * column_index,
-                    color = u32::from(cell)
-                );
-            })
-        });
+    state.grid.iter().enumerate().for_each(|(row_index, row)| {
+        row.iter().enumerate().for_each(|(column_index, cell)| {
+            rect!(
+                w = 16,
+                h = 16,
+                x = 16 * row_index,
+                y = 16 * column_index,
+                color = u32::from(&cell.background)
+            );
 
-    rect!(
-        w = 16,
-        h = 16,
-        x = 16 * state.character_position.0,
-        y = 16 * state.character_position.1,
-        color = 0xff4f00ff
-    );
+            match cell.foreground {
+                TileForeground::Empty => {}
+                TileForeground::Player => {
+                    rect!(
+                        w = 16,
+                        h = 16,
+                        x = 16 * row_index,
+                        y = 16 * column_index,
+                        color = 0xff4f00ff
+                    );
+                }
+                TileForeground::Body => todo!(),
+            }
+        })
+    });
 
     let pad = gamepad(0);
 
     if state.disable_move_until <= tick() {
         let mut moved = false;
         if pad.up.pressed() {
-            state.character_position.1 -= 1;
+            log!("UP IS CLICKED");
+            state.move_player(Direction::Up);
             moved = true;
         }
         if pad.down.pressed() {
-            state.character_position.1 += 1;
+            state.move_player(Direction::Down);
             moved = true;
         }
         if pad.left.pressed() {
-            state.character_position.0 -= 1;
+            state.move_player(Direction::Left);
             moved = true;
         }
         if pad.right.pressed() {
-            state.character_position.0 += 1;
+            state.move_player(Direction::Right);
             moved = true;
         }
 
         if moved {
             state.disable_move_until = tick() + FRAMES_BETWEEN_MOVES;
-            set_cam!(
-                x = state.character_position.0 * 16,
-                y = state.character_position.1 * 16
-            );
         }
     }
+
+    set_cam!(
+        x = state.character_position.x * 16,
+        y = state.character_position.y * 16
+    );
 
     state
 }
