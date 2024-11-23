@@ -133,6 +133,10 @@ fn update(mut state: GameState) -> GameState {
 
         if moved {
             state.disable_move_until = tick() + FRAMES_BETWEEN_MOVES;
+            set_cam!(
+                x = state.character_position.0 * 16,
+                y = state.character_position.1 * 16
+            );
         }
     }
 
