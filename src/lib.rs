@@ -6,17 +6,93 @@
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
 
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum Tile {
+    Black,
+    White,
+}
+
+impl Tile {
+    fn flip(self) -> Self {
+        match self {
+            Tile::Black => Tile::White,
+            Tile::White => Tile::Black,
+        }
+    }
+}
+
+impl From<&Tile> for u32 {
+    fn from(value: &Tile) -> Self {
+        match value {
+            Tile::Black => 0x111111ff,
+            Tile::White => 0xffffffff,
+        }
+    }
+}
+
+enum Parity {
+    Even,
+    Odd,
+}
+
+impl From<u32> for Parity {
+    fn from(value: u32) -> Parity {
+        if value % 2 == 0 {
+            Parity::Even
+        } else {
+            Parity::Odd
+        }
+    }
+}
+
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
-struct GameState {}
+struct GameState {
+    grid: Vec<Vec<Tile>>,
+}
 
 impl Default for GameState {
     fn default() -> Self {
-        GameState {}
+        let grid = (0..20)
+            .map(|x| {
+                let start_with = if matches!(Parity::from(x), Parity::Even) {
+                    Tile::Black
+                } else {
+                    Tile::White
+                };
+
+                (0..20)
+                    .map(|y| {
+                        let parity = Parity::from(y);
+
+                        match parity {
+                            Parity::Even => start_with.flip(),
+                            Parity::Odd => start_with,
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+
+        GameState { grid }
     }
 }
 
 fn update(state: GameState) -> GameState {
-    text!("Hello world!");
+    state
+        .grid
+        .iter()
+        .enumerate()
+        .for_each(|(column_index, row)| {
+            row.iter().enumerate().for_each(|(row_index, cell)| {
+                rect!(
+                    w = 16,
+                    h = 16,
+                    x = 16 * row_index,
+                    y = 16 * column_index,
+                    color = u32::from(cell)
+                );
+            })
+        });
 
     state
 }
