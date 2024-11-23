@@ -6,6 +6,8 @@
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
 
+const FRAMES_BETWEEN_MOVES: usize = 16;
+
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum Tile {
     Black,
@@ -48,6 +50,8 @@ impl From<u32> for Parity {
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
 struct GameState {
     grid: Vec<Vec<Tile>>,
+    character_position: (u32, u32),
+    disable_move_until: usize,
 }
 
 impl Default for GameState {
@@ -73,11 +77,15 @@ impl Default for GameState {
             })
             .collect();
 
-        GameState { grid }
+        GameState {
+            grid,
+            character_position: (0, 0),
+            disable_move_until: 0,
+        }
     }
 }
 
-fn update(state: GameState) -> GameState {
+fn update(mut state: GameState) -> GameState {
     state
         .grid
         .iter()
@@ -93,6 +101,40 @@ fn update(state: GameState) -> GameState {
                 );
             })
         });
+
+    rect!(
+        w = 16,
+        h = 16,
+        x = 16 * state.character_position.0,
+        y = 16 * state.character_position.1,
+        color = 0xff4f00ff
+    );
+
+    let pad = gamepad(0);
+
+    if state.disable_move_until <= tick() {
+        let mut moved = false;
+        if pad.up.pressed() {
+            state.character_position.1 -= 1;
+            moved = true;
+        }
+        if pad.down.pressed() {
+            state.character_position.1 += 1;
+            moved = true;
+        }
+        if pad.left.pressed() {
+            state.character_position.0 -= 1;
+            moved = true;
+        }
+        if pad.right.pressed() {
+            state.character_position.0 += 1;
+            moved = true;
+        }
+
+        if moved {
+            state.disable_move_until = tick() + FRAMES_BETWEEN_MOVES;
+        }
+    }
 
     state
 }
