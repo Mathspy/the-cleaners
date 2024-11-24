@@ -45,9 +45,21 @@ struct Vec2 {
     y: usize,
 }
 
+#[derive(Clone, Copy)]
 struct IVec2 {
     x: isize,
     y: isize,
+}
+
+impl IVec2 {
+    fn clockwise(self) -> Self {
+        match self {
+            IVec2 { x, y } if x == 0 && y == 1 => IVec2 { x: 1, y: 1 },
+            IVec2 { x, y } if x == 1 && y == 1 => IVec2 { x: 1, y: 0 },
+            IVec2 { x, y } if x == 1 && y == 0 => IVec2 { x: 1, y: -1 },
+            _ => panic!("No more clockwise please"),
+        }
+    }
 }
 
 const fn vec2(x: usize, y: usize) -> Vec2 {
@@ -462,8 +474,16 @@ impl GameState {
                             }
                         }
 
-                        let below_body = in_front_of_player + ivec2(0, 1);
-                        self.grid[below_body].item = Item::BodyBag;
+                        let mut around_body = ivec2(0, 1);
+                        let empty_near_body = loop {
+                            let cell = in_front_of_player + around_body;
+                            if self.grid[cell].item == Item::None {
+                                break cell;
+                            }
+
+                            around_body = around_body.clockwise();
+                        };
+                        self.grid[empty_near_body].item = Item::BodyBag;
                     }
 
                     return;
