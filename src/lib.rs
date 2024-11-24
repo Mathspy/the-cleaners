@@ -139,6 +139,61 @@ enum Item {
     BodyBag,
 }
 
+impl Item {
+    fn draw(&self, location: Vec2, flip: bool) {
+        match self {
+            Item::None => {}
+            Item::Body(level, prgrss) => {
+                match level {
+                    BodyLevel::Start => {
+                        asset(vec2(8, 0), location).draw();
+                    }
+                    BodyLevel::One => asset(vec2(13, 0), location).draw(),
+                    BodyLevel::Two => {
+                        asset(vec2(13, 0), location).draw();
+                        asset(vec2(14, 0), location).draw();
+                    }
+                    BodyLevel::Three => {
+                        asset(vec2(13, 0), location).draw();
+                        asset(vec2(14, 0), location).draw();
+                        asset(vec2(15, 0), location).draw();
+                    }
+                    BodyLevel::Four => {
+                        asset(vec2(13, 0), location).draw();
+                        asset(vec2(14, 0), location).draw();
+                        asset(vec2(15, 0), location).draw();
+                        asset(vec2(16, 0), location).draw();
+                    }
+                    BodyLevel::Five => {
+                        asset(vec2(14, 0), location).draw();
+                        asset(vec2(15, 0), location).draw();
+                        asset(vec2(16, 0), location).draw();
+                    }
+                    BodyLevel::Six => {
+                        asset(vec2(15, 0), location).draw();
+                        asset(vec2(16, 0), location).draw();
+                    }
+                    BodyLevel::Seven => {
+                        asset(vec2(16, 0), location).draw();
+                    }
+                }
+                progress(location, (*prgrss as f32) / (BODY_CHOPPING_TIME as f32));
+            }
+            Item::Knife => asset(vec2(6, 2), location).flip_x(flip).draw(),
+            Item::Sponge => asset(vec2(7, 2), location).flip_x(flip).draw(),
+            Item::Bleach => asset(vec2(4, 2), location).flip_x(flip).draw(),
+            Item::Bag => asset(vec2(9, 3), location).flip_x(flip).draw(),
+            Item::BagRoll => asset(vec2(9, 2), location).flip_x(flip).draw(),
+            Item::BodyBag => {
+                asset(vec2(8, 2), location + ivec2(0, 1))
+                    .flip_x(flip)
+                    .draw();
+                asset(vec2(8, 3), location).flip_x(flip).draw()
+            }
+        }
+    }
+}
+
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum BloodLevel {
     None,
@@ -298,8 +353,12 @@ impl GameState {
         self.grid[new_position].player = true
     }
 
+    fn in_front_of_player(&self) -> Vec2 {
+        self.character_position + IVec2::from(self.facing)
+    }
+
     fn interact(&mut self) {
-        let in_front_of_player = self.character_position + IVec2::from(self.facing);
+        let in_front_of_player = self.in_front_of_player();
 
         match &mut self.grid[in_front_of_player].item {
             Item::None => {}
@@ -473,54 +532,7 @@ fn update(mut state: GameState) -> GameState {
                 };
             }
 
-            match cell.item {
-                Item::None => {}
-                Item::Body(level, prgrss) => {
-                    match level {
-                        BodyLevel::Start => {
-                            asset(vec2(8, 0), location).draw();
-                        }
-                        BodyLevel::One => asset(vec2(13, 0), location).draw(),
-                        BodyLevel::Two => {
-                            asset(vec2(13, 0), location).draw();
-                            asset(vec2(14, 0), location).draw();
-                        }
-                        BodyLevel::Three => {
-                            asset(vec2(13, 0), location).draw();
-                            asset(vec2(14, 0), location).draw();
-                            asset(vec2(15, 0), location).draw();
-                        }
-                        BodyLevel::Four => {
-                            asset(vec2(13, 0), location).draw();
-                            asset(vec2(14, 0), location).draw();
-                            asset(vec2(15, 0), location).draw();
-                            asset(vec2(16, 0), location).draw();
-                        }
-                        BodyLevel::Five => {
-                            asset(vec2(14, 0), location).draw();
-                            asset(vec2(15, 0), location).draw();
-                            asset(vec2(16, 0), location).draw();
-                        }
-                        BodyLevel::Six => {
-                            asset(vec2(15, 0), location).draw();
-                            asset(vec2(16, 0), location).draw();
-                        }
-                        BodyLevel::Seven => {
-                            asset(vec2(16, 0), location).draw();
-                        }
-                    }
-                    progress(location, (prgrss as f32) / (BODY_CHOPPING_TIME as f32));
-                }
-                Item::Knife => asset(vec2(6, 2), location).draw(),
-                Item::Sponge => asset(vec2(7, 2), location).draw(),
-                Item::Bleach => asset(vec2(4, 2), location).draw(),
-                Item::Bag => asset(vec2(9, 3), location).draw(),
-                Item::BagRoll => asset(vec2(9, 2), location).draw(),
-                Item::BodyBag => {
-                    asset(vec2(8, 2), location + ivec2(0, 1)).draw();
-                    asset(vec2(8, 3), location).draw()
-                }
-            }
+            cell.item.draw(location, false);
 
             if cell.player {
                 let character_sprite_locations = THE_CAT;
@@ -532,6 +544,12 @@ fn update(mut state: GameState) -> GameState {
                 };
                 asset(sprite, location).flip_x(flip).draw();
             }
+
+            let in_front_of_player = state.in_front_of_player();
+
+            state
+                .inventory
+                .draw(in_front_of_player, matches!(state.facing, Direction::Left));
         })
     });
 
