@@ -203,7 +203,7 @@ fn main() {
 
     let mut grid: Vec<Vec<Tile>> = Vec::new();
 
-    ldtk.levels[0].layer_instances[2]
+    ldtk.levels[1].layer_instances[2]
         .grid_tiles
         .iter()
         .for_each(|tile| {
