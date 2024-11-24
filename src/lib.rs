@@ -407,6 +407,17 @@ impl GameState {
             Item::BodyBag => todo!(),
         }
     }
+
+    fn drop(&mut self) {
+        let in_front_of_player = self.in_front_of_player();
+
+        if self.grid[in_front_of_player].item != Item::None {
+            return;
+        }
+
+        self.grid[in_front_of_player].item = self.inventory;
+        self.inventory = Item::None;
+    }
 }
 
 impl Default for GameState {
@@ -590,6 +601,10 @@ fn update(mut state: GameState) -> GameState {
 
     if pad.a.pressed() {
         state.interact();
+    }
+
+    if pad.b.pressed() {
+        state.drop();
     }
 
     set_cam!(
