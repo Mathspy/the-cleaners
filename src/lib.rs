@@ -81,6 +81,13 @@ enum TileBackground {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum Furniture {
+    None,
+    Floor(Vec2),
+    Wall(Vec2),
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum BodyLevel {
     // CHOP THIS
     Start,
@@ -258,6 +265,7 @@ impl BloodLevel {
 struct Tile {
     background: TileBackground,
     item: Item,
+    furniture: Furniture,
     player: bool,
     blood_level: BloodLevel,
 }
@@ -345,6 +353,9 @@ impl GameState {
         self.facing = direction;
         let new_position = self.character_position + IVec2::from(direction);
         if let TileBackground::Wall(_) = self.grid[new_position].background {
+            return;
+        }
+        if let Furniture::Wall(_) = self.grid[new_position].furniture {
             return;
         }
         if self.grid[new_position].item.collidable() {
@@ -558,6 +569,10 @@ fn update(mut state: GameState) -> GameState {
                     }
                     BloodLevel::Venti => asset(vec2(5, 1), location).draw(),
                 };
+            }
+
+            if let Furniture::Floor(sprite) | Furniture::Wall(sprite) = cell.furniture {
+                asset(sprite, location).draw();
             }
 
             cell.item.draw(location, false);

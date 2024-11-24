@@ -101,6 +101,7 @@ enum BloodLevel {
 #[derive(Clone, Debug, Default)]
 struct Tile {
     background: TileBackground,
+    furniture: TileBackground,
     item: Item,
     blood_level: BloodLevel,
 }
@@ -108,11 +109,19 @@ struct Tile {
 fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
     let columns = tiles
         .iter()
-        .map(|column| {
+        .enumerate()
+        .map(|(x, column)| {
             let column = column
                 .iter()
-                .map(|tile| {
+                .enumerate()
+                .map(|(y, tile)| {
                     let background = match tile.background {
+                        TileBackground::None => panic!("Invalid Tilebackground at {x}, {y}"),
+                        TileBackground::Wall(Vec2 { x, y }) => format!("Wall(vec2({x}, {y}))"),
+                        TileBackground::Floor(Vec2 { x, y }) => format!("Floor(vec2({x}, {y}))"),
+                    };
+
+                    let furniture = match tile.furniture {
                         TileBackground::None => "None".to_string(),
                         TileBackground::Wall(Vec2 { x, y }) => format!("Wall(vec2({x}, {y}))"),
                         TileBackground::Floor(Vec2 { x, y }) => format!("Floor(vec2({x}, {y}))"),
@@ -139,6 +148,7 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                     format!(
                         "Tile {{
                     background: TileBackground::{background},
+                    furniture: Furniture::{furniture},
                     item: Item::{item},
                     player: false,
                     blood_level: BloodLevel::{blood_level}
@@ -153,7 +163,7 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
 
     format!(
         "
-use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME}};
+use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture}};
         
 pub fn create_level_{level}() -> Vec<Vec<Tile>> {{
     vec![
@@ -173,10 +183,12 @@ fn main() {
         .grid_tiles
         .iter()
         .for_each(|tile| {
-            let tag = ldtk.defs.tilesets[0]
+            let tags = ldtk.defs.tilesets[0]
                 .enum_tags
                 .iter()
-                .find(|e| e.tile_ids.contains(&tile.tile));
+                .filter(|e| e.tile_ids.contains(&tile.tile))
+                .map(|e| e.enum_value_id.clone())
+                .collect::<HashSet<String>>();
 
             let custom_data = ldtk.defs.tilesets[0]
                 .custom_data
@@ -247,26 +259,43 @@ fn main() {
                 }
             }
 
-            let Some(tag) = tag else {
+            if tags.is_empty() {
                 return;
             };
 
-            if tag.enum_value_id == "Wall" || tag.enum_value_id == "Floor" {
+            if tags.contains("Wall") || tags.contains("Floor") {
                 let prev = std::mem::take(&mut column[y]);
-                column[y] = Tile {
-                    background: if tag.enum_value_id == "Wall" {
-                        TileBackground::Wall(Vec2 {
-                            x: tile.source.0 / 16,
-                            y: tile.source.1 / 16,
-                        })
-                    } else {
-                        TileBackground::Floor(Vec2 {
-                            x: tile.source.0 / 16,
-                            y: tile.source.1 / 16,
-                        })
-                    },
-                    ..prev
-                };
+                if tags.contains("Furniture") {
+                    column[y] = Tile {
+                        furniture: if tags.contains("Wall") {
+                            TileBackground::Wall(Vec2 {
+                                x: tile.source.0 / 16,
+                                y: tile.source.1 / 16,
+                            })
+                        } else {
+                            TileBackground::Floor(Vec2 {
+                                x: tile.source.0 / 16,
+                                y: tile.source.1 / 16,
+                            })
+                        },
+                        ..prev
+                    };
+                } else {
+                    column[y] = Tile {
+                        background: if tags.contains("Wall") {
+                            TileBackground::Wall(Vec2 {
+                                x: tile.source.0 / 16,
+                                y: tile.source.1 / 16,
+                            })
+                        } else {
+                            TileBackground::Floor(Vec2 {
+                                x: tile.source.0 / 16,
+                                y: tile.source.1 / 16,
+                            })
+                        },
+                        ..prev
+                    };
+                }
             }
         });
 
