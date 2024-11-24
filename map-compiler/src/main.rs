@@ -86,6 +86,7 @@ enum Item {
     BagRoll,
     BodyBag,
     Bag,
+    Body,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -125,6 +126,7 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                         Item::BagRoll => "BagRoll".to_string(),
                         Item::BodyBag => "BodyBag".to_string(),
                         Item::Bag => "Bag".to_string(),
+                        Item::Body => "Body(BodyLevel::Start, BODY_CHOPPING_TIME)".to_string(),
                     };
 
                     let blood_level = match tile.blood_level {
@@ -151,7 +153,7 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
 
     format!(
         "
-use crate::{{Tile, TileBackground, Item, vec2, BloodLevel}};
+use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME}};
         
 pub fn create_level_{level}() -> Vec<Vec<Tile>> {{
     vec![
@@ -235,6 +237,10 @@ fn main() {
                     },
                     "BAG" => Tile {
                         item: Item::Bag,
+                        ..prev
+                    },
+                    "BODY" => Tile {
+                        item: Item::Body,
                         ..prev
                     },
                     value => panic!("Unknown item {value}"),
