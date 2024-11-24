@@ -6,7 +6,7 @@ use turbo::prelude::*;
 
 const CELL_SIZE: usize = 16;
 const FRAMES_BETWEEN_MOVES: usize = 16;
-const BODY_CHOPPING_TIME: usize = 100;
+const BODY_CHOPPING_TIME: isize = 100;
 const PROGRESS_BAR_SIZE: usize = CELL_SIZE - 4;
 
 struct CharacterSpriteLocations {
@@ -103,9 +103,30 @@ impl From<&TileBackground> for u32 {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum BodyLevel {
+    Start,
+    One,
+    Two,
+    Three,
+    Four,
+}
+
+impl BodyLevel {
+    fn lower(self) -> Self {
+        match self {
+            BodyLevel::Start => BodyLevel::One,
+            BodyLevel::One => BodyLevel::Two,
+            BodyLevel::Two => BodyLevel::Three,
+            BodyLevel::Three => BodyLevel::Four,
+            BodyLevel::Four => todo!(),
+        }
+    }
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum Item {
     None,
-    Body(usize),
+    Body(BodyLevel, isize),
     Knife,
 }
 
@@ -281,7 +302,7 @@ impl GameState {
         self.character_position += IVec2::from(direction);
         let new_position = self.character_position;
 
-        if let Item::Body(_) = self.grid[new_position].item {
+        if let Item::Body(_, _) = self.grid[new_position].item {
             self.grid[new_position].blood_level = BloodLevel::Venti;
             self.blood_on_boots = BloodLevel::Venti;
         }
@@ -302,12 +323,17 @@ impl GameState {
 
         match &mut self.grid[in_front_of_player].item {
             Item::None => {}
-            Item::Body(progress) => {
+            Item::Body(level, progress) => {
                 if self.inventory != Item::Knife {
                     return;
                 }
 
                 *progress -= 1;
+
+                if *progress <= 0 {
+                    self.grid[in_front_of_player].item =
+                        Item::Body(level.lower(), BODY_CHOPPING_TIME);
+                }
             }
             Item::Knife => {
                 self.inventory = Item::Knife;
@@ -322,7 +348,7 @@ impl Default for GameState {
         let mut grid = Grid::new();
 
         grid[vec2(0, 0)].player = true;
-        grid[vec2(3, 3)].item = Item::Body(BODY_CHOPPING_TIME);
+        grid[vec2(3, 3)].item = Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME);
         grid[vec2(2, 1)].item = Item::Knife;
 
         GameState {
@@ -385,6 +411,24 @@ impl Asset {
     }
 }
 
+fn progress(location: Vec2, progress: f32) {
+    let rect_size = lerp(PROGRESS_BAR_SIZE, 0, progress);
+    rect!(
+        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
+        y = CELL_SIZE * location.y - CELL_SIZE / 4,
+        w = PROGRESS_BAR_SIZE,
+        h = 2,
+        color = 0x888888ff,
+    );
+    rect!(
+        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
+        y = CELL_SIZE * location.y - CELL_SIZE / 4,
+        w = rect_size,
+        h = 2,
+        color = 0x00ff00ff,
+    );
+}
+
 fn lerp(start: usize, end: usize, t: f32) -> usize {
     ((start as f32) * (1.0 - t) + (end as f32) * t).round() as usize
 }
@@ -426,24 +470,29 @@ fn update(mut state: GameState) -> GameState {
 
             match cell.item {
                 Item::None => {}
-                Item::Body(progress) => {
-                    asset(vec2(8, 0), location).draw();
-                    let progress = (progress as f32) / (BODY_CHOPPING_TIME as f32);
-                    let rect_size = lerp(PROGRESS_BAR_SIZE, 0, progress);
-                    rect!(
-                        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
-                        y = CELL_SIZE * location.y - CELL_SIZE / 4,
-                        w = PROGRESS_BAR_SIZE,
-                        h = 2,
-                        color = 0x888888ff,
-                    );
-                    rect!(
-                        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
-                        y = CELL_SIZE * location.y - CELL_SIZE / 4,
-                        w = rect_size,
-                        h = 2,
-                        color = 0x00ff00ff,
-                    );
+                Item::Body(level, prgrss) => {
+                    match level {
+                        BodyLevel::Start => {
+                            asset(vec2(8, 0), location).draw();
+                        }
+                        BodyLevel::One => asset(vec2(13, 0), location).draw(),
+                        BodyLevel::Two => {
+                            asset(vec2(13, 0), location).draw();
+                            asset(vec2(14, 0), location).draw();
+                        }
+                        BodyLevel::Three => {
+                            asset(vec2(13, 0), location).draw();
+                            asset(vec2(14, 0), location).draw();
+                            asset(vec2(15, 0), location).draw();
+                        }
+                        BodyLevel::Four => {
+                            asset(vec2(13, 0), location).draw();
+                            asset(vec2(14, 0), location).draw();
+                            asset(vec2(15, 0), location).draw();
+                            asset(vec2(16, 0), location).draw();
+                        }
+                    }
+                    progress(location, (prgrss as f32) / (BODY_CHOPPING_TIME as f32));
                 }
                 Item::Knife => asset(vec2(6, 2), location).draw(),
             }
