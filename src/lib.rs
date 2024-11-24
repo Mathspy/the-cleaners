@@ -341,8 +341,14 @@ impl From<u32> for Parity {
 struct Grid(Vec<Vec<Tile>>);
 
 impl Grid {
-    fn new() -> (Self, Vec2) {
+    fn tutorial() -> (Self, Vec2) {
         let (grid, character_position) = tiles::create_level_0();
+
+        (Grid(grid), character_position)
+    }
+
+    fn level_1() -> (Self, Vec2) {
+        let (grid, character_position) = tiles::create_level_1();
 
         (Grid(grid), character_position)
     }
@@ -367,7 +373,7 @@ impl std::ops::IndexMut<Vec2> for Grid {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
-struct GameState {
+struct LevelState {
     // Gameplay:
     grid: Grid,
     blood_on_boots: BloodLevel,
@@ -380,6 +386,13 @@ struct GameState {
 
     // Performance:
     character_position: Vec2,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+enum GameState {
+    Tutorial(LevelState),
+    Level1(LevelState),
+    EndScreen,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, PartialOrd, Eq, Hash, Debug, Clone, Copy)]
@@ -401,7 +414,12 @@ impl From<Direction> for IVec2 {
     }
 }
 
-impl GameState {
+enum LevelFinished {
+    Yes,
+    No,
+}
+
+impl LevelState {
     fn move_player(&mut self, direction: Direction) {
         let previous_position = self.character_position;
         self.facing = direction;
@@ -437,7 +455,19 @@ impl GameState {
         self.character_position + IVec2::from(self.facing)
     }
 
-    fn interact(&mut self) {
+    fn is_finished(&self) -> bool {
+        !self.grid.iter().any(|column| {
+            column.iter().any(|cell| {
+                if cell.blood_level != BloodLevel::None {
+                    return true;
+                }
+
+                matches!(cell.item, Item::Body(_, _) | Item::BodyBag)
+            })
+        })
+    }
+
+    fn interact(&mut self) -> LevelFinished {
         let in_front_of_player = self.in_front_of_player();
 
         if self.inventory.is_cleaning_item() {
@@ -450,17 +480,23 @@ impl GameState {
 
                     if *progress <= 0 {
                         self.grid[in_front_of_player].blood_level.decrement();
+
+                        if self.grid[in_front_of_player].blood_level == BloodLevel::None
+                            && self.is_finished()
+                        {
+                            return LevelFinished::Yes;
+                        }
                     }
                 }
             }
         }
 
         match &mut self.grid[in_front_of_player].item {
-            Item::None => {}
+            Item::None => LevelFinished::No,
             Item::Body(level, progress) => {
                 if level.action() == BodyAction::Bag {
                     if self.inventory != Item::Bag {
-                        return;
+                        return LevelFinished::No;
                     }
 
                     *progress -= 1;
@@ -490,11 +526,11 @@ impl GameState {
                         self.grid[empty_near_body].item = Item::BodyBag;
                     }
 
-                    return;
+                    return LevelFinished::No;
                 }
 
                 if self.inventory != Item::Knife {
-                    return;
+                    return LevelFinished::No;
                 }
 
                 *progress -= 1;
@@ -502,59 +538,80 @@ impl GameState {
                 if *progress <= 0 {
                     let Some(new_level) = level.lower() else {
                         self.grid[in_front_of_player].item = Item::None;
-                        return;
+                        return LevelFinished::No;
                     };
                     self.grid[in_front_of_player].item = Item::Body(new_level, BODY_CHOPPING_TIME);
                 }
+
+                LevelFinished::No
             }
             item @ (Item::Knife | Item::Sponge | Item::Bleach | Item::Bag | Item::BodyBag) => {
                 if self.inventory != Item::None {
-                    return;
+                    return LevelFinished::No;
                 }
 
                 self.inventory = *item;
                 self.grid[in_front_of_player].item = Item::None;
+
+                LevelFinished::No
             }
             Item::BagRoll => {
                 if self.inventory != Item::None {
-                    return;
+                    return LevelFinished::No;
                 }
 
                 self.inventory = Item::Bag;
+
+                LevelFinished::No
             }
         }
     }
 
-    fn drop(&mut self) {
+    fn drop(&mut self) -> LevelFinished {
         let in_front_of_player = self.in_front_of_player();
 
         if self.grid[in_front_of_player].drop_point && self.inventory == Item::BodyBag {
             self.inventory = Item::None;
-            return;
+            return match self.is_finished() {
+                true => LevelFinished::Yes,
+                false => LevelFinished::No,
+            };
         }
 
         if self.grid[in_front_of_player].item != Item::None {
-            return;
+            return LevelFinished::No;
         }
 
         self.grid[in_front_of_player].item = self.inventory;
         self.inventory = Item::None;
+
+        LevelFinished::No
+    }
+}
+
+impl LevelState {
+    fn new(data: (Grid, Vec2)) -> Self {
+        LevelState {
+            grid: data.0,
+            inventory: Item::None,
+            blood_on_boots: BloodLevel::None,
+            facing: Direction::Down,
+            character_position: data.1,
+            disable_move_until: 0,
+            last_frame_directions: HashSet::new(),
+        }
+    }
+}
+
+impl GameState {
+    fn level_1() -> GameState {
+        Self::Level1(LevelState::new(Grid::level_1()))
     }
 }
 
 impl Default for GameState {
     fn default() -> Self {
-        let (grid, character_position) = Grid::new();
-
-        GameState {
-            grid,
-            inventory: Item::None,
-            blood_on_boots: BloodLevel::None,
-            facing: Direction::Down,
-            character_position,
-            disable_move_until: 0,
-            last_frame_directions: HashSet::new(),
-        }
+        Self::Tutorial(LevelState::new(Grid::tutorial()))
     }
 }
 
@@ -624,7 +681,12 @@ fn lerp(start: usize, end: usize, t: f32) -> usize {
     ((start as f32) * (1.0 - t) + (end as f32) * t).round() as usize
 }
 
-fn update(mut state: GameState) -> GameState {
+enum LevelUpdate {
+    Update(LevelState),
+    NextLevel,
+}
+
+fn update_level(mut state: LevelState) -> LevelUpdate {
     state.grid.iter().enumerate().for_each(|(row_index, row)| {
         row.iter().enumerate().for_each(|(column_index, cell)| {
             let location = vec2(row_index, column_index);
@@ -706,11 +768,15 @@ fn update(mut state: GameState) -> GameState {
     }
 
     if pad.a.pressed() {
-        state.interact();
+        if let LevelFinished::Yes = state.interact() {
+            return LevelUpdate::NextLevel;
+        }
     }
 
     if pad.b.pressed() {
-        state.drop();
+        if let LevelFinished::Yes = state.drop() {
+            return LevelUpdate::NextLevel;
+        }
     }
 
     set_cam!(
@@ -718,7 +784,21 @@ fn update(mut state: GameState) -> GameState {
         y = state.character_position.y * 16
     );
 
-    state
+    LevelUpdate::Update(state)
+}
+
+fn update(state: GameState) -> GameState {
+    match state {
+        GameState::Tutorial(state) => match update_level(state) {
+            LevelUpdate::Update(level_state) => GameState::Tutorial(level_state),
+            LevelUpdate::NextLevel => GameState::level_1(),
+        },
+        GameState::Level1(state) => match update_level(state) {
+            LevelUpdate::Update(level_state) => GameState::Level1(level_state),
+            LevelUpdate::NextLevel => GameState::EndScreen,
+        },
+        GameState::EndScreen => todo!(),
+    }
 }
 
 // UPDATE MACHINERY

@@ -44,8 +44,6 @@ struct GridTile {
 
 #[derive(Deserialize)]
 struct LayerInstance {
-    #[serde(rename = "__identifier")]
-    id: String,
     #[serde(rename = "gridTiles")]
     grid_tiles: Vec<GridTile>,
 }
@@ -109,7 +107,7 @@ struct Tile {
     player: bool,
 }
 
-fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
+fn level_function(tiles: &[Vec<Tile>], level: usize) -> String {
     let mut character_position = None;
 
     let columns = tiles
@@ -187,8 +185,6 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
 
     format!(
         "
-use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture, CLEANING_TIME, Vec2}};
-        
 pub fn create_level_{level}() -> (Vec<Vec<Tile>>, Vec2) {{
     (vec![
         {columns}
@@ -198,151 +194,169 @@ pub fn create_level_{level}() -> (Vec<Vec<Tile>>, Vec2) {{
     )
 }
 
+fn tiles_file(functions: String) -> String {
+    format!("
+use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture, CLEANING_TIME, Vec2}};
+        
+{functions}
+")
+}
+
 fn main() {
     let ldtk = serde_json::from_reader::<_, Ldtk>(File::open("./Cleaners.ldtk").unwrap()).unwrap();
 
-    let mut grid: Vec<Vec<Tile>> = Vec::new();
-
-    ldtk.levels[1].layer_instances[2]
-        .grid_tiles
+    let levels = ldtk
+        .levels
         .iter()
-        .for_each(|tile| {
-            let tags = ldtk.defs.tilesets[0]
-                .enum_tags
-                .iter()
-                .filter(|e| e.tile_ids.contains(&tile.tile))
-                .map(|e| e.enum_value_id.clone())
-                .collect::<HashSet<String>>();
+        .map(|level| {
+            let mut grid: Vec<Vec<Tile>> = Vec::new();
 
-            let custom_data = ldtk.defs.tilesets[0]
-                .custom_data
-                .iter()
-                .find(|e| e.tile_id == tile.tile);
+            level.layer_instances[2].grid_tiles.iter().for_each(|tile| {
+                let tags = ldtk.defs.tilesets[0]
+                    .enum_tags
+                    .iter()
+                    .filter(|e| e.tile_ids.contains(&tile.tile))
+                    .map(|e| e.enum_value_id.clone())
+                    .collect::<HashSet<String>>();
 
-            let (x, y) = (tile.position.0 / 16, tile.position.1 / 16);
+                let custom_data = ldtk.defs.tilesets[0]
+                    .custom_data
+                    .iter()
+                    .find(|e| e.tile_id == tile.tile);
 
-            if grid.len() < x + 1 {
-                grid.extend(std::iter::repeat_n(Vec::new(), x + 1 - grid.len()));
-            }
+                let (x, y) = (tile.position.0 / 16, tile.position.1 / 16);
 
-            let column = &mut grid[x];
-
-            if column.len() < y + 1 {
-                column.extend(std::iter::repeat_n(
-                    Default::default(),
-                    y + 1 - column.len(),
-                ));
-            }
-
-            if let Some(custom_data) = custom_data {
-                let data = custom_data.data.as_str();
-                let prev = std::mem::take(&mut column[y]);
-
-                column[y] = match data {
-                    "BLOOD_2" => Tile {
-                        blood_level: BloodLevel::Grande,
-                        ..prev
-                    },
-                    "BLOOD_1" => Tile {
-                        blood_level: BloodLevel::Tall,
-                        ..prev
-                    },
-                    "BLOOD_3" => Tile {
-                        blood_level: BloodLevel::Venti,
-                        ..prev
-                    },
-                    "BLEACH" => Tile {
-                        item: Item::Bleach,
-                        ..prev
-                    },
-                    "KNIFE" => Tile {
-                        item: Item::Knife,
-                        ..prev
-                    },
-                    "SPONGE" => Tile {
-                        item: Item::Sponge,
-                        ..prev
-                    },
-                    "BAG_ROLL" => Tile {
-                        item: Item::BagRoll,
-                        ..prev
-                    },
-                    "BODY_BAG" => Tile {
-                        item: Item::BodyBag,
-                        ..prev
-                    },
-                    "BAG" => Tile {
-                        item: Item::Bag,
-                        ..prev
-                    },
-                    "BODY" => Tile {
-                        item: Item::Body,
-                        ..prev
-                    },
-                    "DROP_POINT" => Tile {
-                        drop_point: true,
-                        ..prev
-                    },
-                    "SPAWN" => Tile {
-                        player: true,
-                        ..prev
-                    },
-                    value => panic!("Unknown item {value}"),
+                if grid.len() < x + 1 {
+                    grid.extend(std::iter::repeat_n(Vec::new(), x + 1 - grid.len()));
                 }
-            }
 
-            if tags.is_empty() {
-                return;
-            };
+                let column = &mut grid[x];
 
-            if tags.contains("Foreground") {
-                let prev = std::mem::take(&mut column[y]);
-                column[y] = Tile {
-                    foreground: Some(Vec2 {
-                        x: tile.source.0 / 16,
-                        y: tile.source.1 / 16,
-                    }),
-                    ..prev
+                if column.len() < y + 1 {
+                    column.extend(std::iter::repeat_n(
+                        Default::default(),
+                        y + 1 - column.len(),
+                    ));
+                }
+
+                if let Some(custom_data) = custom_data {
+                    let data = custom_data.data.as_str();
+                    let prev = std::mem::take(&mut column[y]);
+
+                    column[y] = match data {
+                        "BLOOD_2" => Tile {
+                            blood_level: BloodLevel::Grande,
+                            ..prev
+                        },
+                        "BLOOD_1" => Tile {
+                            blood_level: BloodLevel::Tall,
+                            ..prev
+                        },
+                        "BLOOD_3" => Tile {
+                            blood_level: BloodLevel::Venti,
+                            ..prev
+                        },
+                        "BLEACH" => Tile {
+                            item: Item::Bleach,
+                            ..prev
+                        },
+                        "KNIFE" => Tile {
+                            item: Item::Knife,
+                            ..prev
+                        },
+                        "SPONGE" => Tile {
+                            item: Item::Sponge,
+                            ..prev
+                        },
+                        "BAG_ROLL" => Tile {
+                            item: Item::BagRoll,
+                            ..prev
+                        },
+                        "BODY_BAG" => Tile {
+                            item: Item::BodyBag,
+                            ..prev
+                        },
+                        "BAG" => Tile {
+                            item: Item::Bag,
+                            ..prev
+                        },
+                        "BODY" => Tile {
+                            item: Item::Body,
+                            ..prev
+                        },
+                        "DROP_POINT" => Tile {
+                            drop_point: true,
+                            ..prev
+                        },
+                        "SPAWN" => Tile {
+                            player: true,
+                            ..prev
+                        },
+                        value => panic!("Unknown item {value}"),
+                    }
+                }
+
+                if tags.is_empty() {
+                    return;
                 };
-            }
 
-            if tags.contains("Wall") || tags.contains("Floor") {
-                let prev = std::mem::take(&mut column[y]);
-                if tags.contains("Furniture") {
+                if tags.contains("Foreground") {
+                    let prev = std::mem::take(&mut column[y]);
                     column[y] = Tile {
-                        furniture: if tags.contains("Wall") {
-                            TileBackground::Wall(Vec2 {
-                                x: tile.source.0 / 16,
-                                y: tile.source.1 / 16,
-                            })
-                        } else {
-                            TileBackground::Floor(Vec2 {
-                                x: tile.source.0 / 16,
-                                y: tile.source.1 / 16,
-                            })
-                        },
-                        ..prev
-                    };
-                } else {
-                    column[y] = Tile {
-                        background: if tags.contains("Wall") {
-                            TileBackground::Wall(Vec2 {
-                                x: tile.source.0 / 16,
-                                y: tile.source.1 / 16,
-                            })
-                        } else {
-                            TileBackground::Floor(Vec2 {
-                                x: tile.source.0 / 16,
-                                y: tile.source.1 / 16,
-                            })
-                        },
+                        foreground: Some(Vec2 {
+                            x: tile.source.0 / 16,
+                            y: tile.source.1 / 16,
+                        }),
                         ..prev
                     };
                 }
-            }
-        });
 
-    let file = tiles_file(&grid, 0);
+                if tags.contains("Wall") || tags.contains("Floor") {
+                    let prev = std::mem::take(&mut column[y]);
+                    if tags.contains("Furniture") {
+                        column[y] = Tile {
+                            furniture: if tags.contains("Wall") {
+                                TileBackground::Wall(Vec2 {
+                                    x: tile.source.0 / 16,
+                                    y: tile.source.1 / 16,
+                                })
+                            } else {
+                                TileBackground::Floor(Vec2 {
+                                    x: tile.source.0 / 16,
+                                    y: tile.source.1 / 16,
+                                })
+                            },
+                            ..prev
+                        };
+                    } else {
+                        column[y] = Tile {
+                            background: if tags.contains("Wall") {
+                                TileBackground::Wall(Vec2 {
+                                    x: tile.source.0 / 16,
+                                    y: tile.source.1 / 16,
+                                })
+                            } else {
+                                TileBackground::Floor(Vec2 {
+                                    x: tile.source.0 / 16,
+                                    y: tile.source.1 / 16,
+                                })
+                            },
+                            ..prev
+                        };
+                    }
+                }
+            });
+
+            grid
+        })
+        .collect::<Vec<_>>();
+
+    let level_functions = levels
+        .into_iter()
+        .enumerate()
+        .map(|(level_num, grid)| level_function(&grid, level_num))
+        .join("\n");
+    let file = tiles_file(level_functions);
 
     std::fs::write("../src/tiles.rs", file).unwrap();
 }
