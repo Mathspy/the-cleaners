@@ -140,6 +140,18 @@ enum Item {
 }
 
 impl Item {
+    fn collidable(&self) -> bool {
+        match self {
+            Item::None
+            | Item::Body(_, _)
+            | Item::Knife
+            | Item::Sponge
+            | Item::Bleach
+            | Item::Bag
+            | Item::BagRoll => false,
+            Item::BodyBag => true,
+        }
+    }
     fn draw(&self, location: Vec2, flip: bool) {
         match self {
             Item::None => {}
@@ -185,7 +197,7 @@ impl Item {
             Item::Bag => asset(vec2(9, 3), location).flip_x(flip).draw(),
             Item::BagRoll => asset(vec2(9, 2), location).flip_x(flip).draw(),
             Item::BodyBag => {
-                asset(vec2(8, 2), location + ivec2(0, 1))
+                asset(vec2(8, 2), location + ivec2(0, -1))
                     .flip_x(flip)
                     .draw();
                 asset(vec2(8, 3), location).flip_x(flip).draw()
@@ -335,6 +347,9 @@ impl GameState {
         if let TileBackground::Wall(_) = self.grid[new_position].background {
             return;
         }
+        if self.grid[new_position].item.collidable() {
+            return;
+        }
         self.character_position = new_position;
 
         if let Item::Body(_, _) = self.grid[new_position].item {
@@ -392,7 +407,7 @@ impl GameState {
                         Item::Body(level.lower(), BODY_CHOPPING_TIME);
                 }
             }
-            item @ (Item::Knife | Item::Sponge | Item::Bleach | Item::Bag) => {
+            item @ (Item::Knife | Item::Sponge | Item::Bleach | Item::Bag | Item::BodyBag) => {
                 if self.inventory != Item::None {
                     return;
                 }
@@ -407,7 +422,6 @@ impl GameState {
 
                 self.inventory = Item::Bag;
             }
-            Item::BodyBag => todo!(),
         }
     }
 
