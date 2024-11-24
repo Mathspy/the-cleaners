@@ -8,3 +8,7 @@ turbo = { version = "*", package = "turbo-genesis-sdk" }
 
 [lib]
 crate-type = ["cdylib"]
+
+[workspace]
+members = ["map-compiler"]
+resolver = "2"
