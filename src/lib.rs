@@ -6,6 +6,8 @@ use turbo::prelude::*;
 
 const CELL_SIZE: usize = 16;
 const FRAMES_BETWEEN_MOVES: usize = 16;
+const BODY_CHOPPING_TIME: usize = 100;
+const PROGRESS_BAR_SIZE: usize = CELL_SIZE - 4;
 
 struct CharacterSpriteLocations {
     down: Vec2,
@@ -40,13 +42,39 @@ struct Vec2 {
     y: usize,
 }
 
+struct IVec2 {
+    x: isize,
+    y: isize,
+}
+
 const fn vec2(x: usize, y: usize) -> Vec2 {
     Vec2 { x, y }
+}
+
+const fn ivec2(x: isize, y: isize) -> IVec2 {
+    IVec2 { x, y }
 }
 
 impl Vec2 {
     fn new() -> Self {
         Default::default()
+    }
+}
+
+impl std::ops::AddAssign<IVec2> for Vec2 {
+    fn add_assign(&mut self, rhs: IVec2) {
+        self.x = ((self.x as isize) + rhs.x) as usize;
+        self.y = ((self.y as isize) + rhs.y) as usize;
+    }
+}
+
+impl std::ops::Add<IVec2> for Vec2 {
+    type Output = Self;
+
+    fn add(mut self, rhs: IVec2) -> Self {
+        self += rhs;
+
+        self
     }
 }
 
@@ -77,7 +105,8 @@ impl From<&TileBackground> for u32 {
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum Item {
     None,
-    Body,
+    Body(usize),
+    Knife,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
@@ -216,6 +245,7 @@ struct GameState {
     grid: Grid,
     blood_on_boots: BloodLevel,
     facing: Direction,
+    inventory: Item,
 
     // Restrictions:
     disable_move_until: usize,
@@ -233,30 +263,25 @@ enum Direction {
     Right,
 }
 
+impl From<Direction> for IVec2 {
+    fn from(value: Direction) -> Self {
+        match value {
+            Direction::Up => ivec2(0, -1),
+            Direction::Down => ivec2(0, 1),
+            Direction::Left => ivec2(-1, 0),
+            Direction::Right => ivec2(1, 0),
+        }
+    }
+}
+
 impl GameState {
     fn move_player(&mut self, direction: Direction) {
         let previous_position = self.character_position;
-        match direction {
-            Direction::Up => {
-                self.facing = direction;
-                self.character_position.y -= 1;
-            }
-            Direction::Down => {
-                self.facing = direction;
-                self.character_position.y += 1;
-            }
-            Direction::Left => {
-                self.facing = direction;
-                self.character_position.x -= 1;
-            }
-            Direction::Right => {
-                self.facing = direction;
-                self.character_position.x += 1;
-            }
-        };
+        self.facing = direction;
+        self.character_position += IVec2::from(direction);
         let new_position = self.character_position;
 
-        if self.grid[new_position].item == Item::Body {
+        if let Item::Body(_) = self.grid[new_position].item {
             self.grid[new_position].blood_level = BloodLevel::Venti;
             self.blood_on_boots = BloodLevel::Venti;
         }
@@ -271,6 +296,25 @@ impl GameState {
         self.grid[previous_position].player = false;
         self.grid[new_position].player = true
     }
+
+    fn interact(&mut self) {
+        let in_front_of_player = self.character_position + IVec2::from(self.facing);
+
+        match &mut self.grid[in_front_of_player].item {
+            Item::None => {}
+            Item::Body(progress) => {
+                if self.inventory != Item::Knife {
+                    return;
+                }
+
+                *progress -= 1;
+            }
+            Item::Knife => {
+                self.inventory = Item::Knife;
+                self.grid[in_front_of_player].item = Item::None;
+            }
+        }
+    }
 }
 
 impl Default for GameState {
@@ -278,10 +322,12 @@ impl Default for GameState {
         let mut grid = Grid::new();
 
         grid[vec2(0, 0)].player = true;
-        grid[vec2(3, 3)].item = Item::Body;
+        grid[vec2(3, 3)].item = Item::Body(BODY_CHOPPING_TIME);
+        grid[vec2(2, 1)].item = Item::Knife;
 
         GameState {
             grid,
+            inventory: Item::None,
             blood_on_boots: BloodLevel::None,
             facing: Direction::Down,
             character_position: Vec2::new(),
@@ -339,6 +385,10 @@ impl Asset {
     }
 }
 
+fn lerp(start: usize, end: usize, t: f32) -> usize {
+    ((start as f32) * (1.0 - t) + (end as f32) * t).round() as usize
+}
+
 fn update(mut state: GameState) -> GameState {
     state.grid.iter().enumerate().for_each(|(row_index, row)| {
         row.iter().enumerate().for_each(|(column_index, cell)| {
@@ -376,7 +426,26 @@ fn update(mut state: GameState) -> GameState {
 
             match cell.item {
                 Item::None => {}
-                Item::Body => asset(vec2(8, 0), location).draw(),
+                Item::Body(progress) => {
+                    asset(vec2(8, 0), location).draw();
+                    let progress = (progress as f32) / (BODY_CHOPPING_TIME as f32);
+                    let rect_size = lerp(PROGRESS_BAR_SIZE, 0, progress);
+                    rect!(
+                        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
+                        y = CELL_SIZE * location.y - CELL_SIZE / 4,
+                        w = PROGRESS_BAR_SIZE,
+                        h = 2,
+                        color = 0x888888ff,
+                    );
+                    rect!(
+                        x = CELL_SIZE * location.x + (CELL_SIZE - PROGRESS_BAR_SIZE) / 2,
+                        y = CELL_SIZE * location.y - CELL_SIZE / 4,
+                        w = rect_size,
+                        h = 2,
+                        color = 0x00ff00ff,
+                    );
+                }
+                Item::Knife => asset(vec2(6, 2), location).draw(),
             }
 
             if cell.player {
@@ -425,6 +494,10 @@ fn update(mut state: GameState) -> GameState {
             state.move_player(direction);
             state.disable_move_until = tick() + FRAMES_BETWEEN_MOVES;
         }
+    }
+
+    if pad.a.pressed() {
+        state.interact();
     }
 
     set_cam!(
