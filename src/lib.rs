@@ -109,16 +109,16 @@ enum BodyAction {
 }
 
 impl BodyLevel {
-    fn lower(self) -> Self {
+    fn lower(self) -> Option<Self> {
         match self {
-            BodyLevel::Start => BodyLevel::One,
-            BodyLevel::One => BodyLevel::Two,
-            BodyLevel::Two => BodyLevel::Three,
-            BodyLevel::Three => BodyLevel::Four,
-            BodyLevel::Four => BodyLevel::Five,
-            BodyLevel::Five => BodyLevel::Six,
-            BodyLevel::Six => BodyLevel::Seven,
-            BodyLevel::Seven => todo!(),
+            BodyLevel::Start => Some(BodyLevel::One),
+            BodyLevel::One => Some(BodyLevel::Two),
+            BodyLevel::Two => Some(BodyLevel::Three),
+            BodyLevel::Three => Some(BodyLevel::Four),
+            BodyLevel::Four => Some(BodyLevel::Five),
+            BodyLevel::Five => Some(BodyLevel::Six),
+            BodyLevel::Six => Some(BodyLevel::Seven),
+            BodyLevel::Seven => None,
         }
     }
 
@@ -398,8 +398,12 @@ impl GameState {
 
                     if *progress <= 0 {
                         self.inventory = Item::None;
+                        let Some(new_level) = level.lower() else {
+                            self.grid[in_front_of_player].item = Item::None;
+                            return;
+                        };
                         self.grid[in_front_of_player].item =
-                            Item::Body(level.lower(), BODY_CHOPPING_TIME);
+                            Item::Body(new_level, BODY_CHOPPING_TIME);
                         let below_body = in_front_of_player + ivec2(0, 1);
                         self.grid[below_body].item = Item::BodyBag;
                     }
@@ -414,8 +418,11 @@ impl GameState {
                 *progress -= 1;
 
                 if *progress <= 0 {
-                    self.grid[in_front_of_player].item =
-                        Item::Body(level.lower(), BODY_CHOPPING_TIME);
+                    let Some(new_level) = level.lower() else {
+                        self.grid[in_front_of_player].item = Item::None;
+                        return;
+                    };
+                    self.grid[in_front_of_player].item = Item::Body(new_level, BODY_CHOPPING_TIME);
                 }
             }
             item @ (Item::Knife | Item::Sponge | Item::Bleach | Item::Bag | Item::BodyBag) => {
