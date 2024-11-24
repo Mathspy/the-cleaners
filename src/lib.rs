@@ -82,11 +82,23 @@ enum TileBackground {
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum BodyLevel {
+    // CHOP THIS
     Start,
     One,
     Two,
     Three,
+
+    // BAG THIS
     Four,
+    Five,
+    Six,
+    Seven,
+}
+
+#[derive(PartialEq)]
+enum BodyAction {
+    Chop,
+    Bag,
 }
 
 impl BodyLevel {
@@ -96,7 +108,21 @@ impl BodyLevel {
             BodyLevel::One => BodyLevel::Two,
             BodyLevel::Two => BodyLevel::Three,
             BodyLevel::Three => BodyLevel::Four,
-            BodyLevel::Four => todo!(),
+            BodyLevel::Four => BodyLevel::Five,
+            BodyLevel::Five => BodyLevel::Six,
+            BodyLevel::Six => BodyLevel::Seven,
+            BodyLevel::Seven => todo!(),
+        }
+    }
+
+    fn action(&self) -> BodyAction {
+        match self {
+            BodyLevel::Start | BodyLevel::One | BodyLevel::Two | BodyLevel::Three => {
+                BodyAction::Chop
+            }
+            BodyLevel::Four | BodyLevel::Five | BodyLevel::Six | BodyLevel::Seven => {
+                BodyAction::Bag
+            }
         }
     }
 }
@@ -278,6 +304,21 @@ impl GameState {
         match &mut self.grid[in_front_of_player].item {
             Item::None => {}
             Item::Body(level, progress) => {
+                if level.action() == BodyAction::Bag {
+                    if self.inventory != Item::Bag {
+                        return;
+                    }
+
+                    *progress -= 1;
+
+                    if *progress <= 0 {
+                        let below_body = in_front_of_player + ivec2(0, 1);
+                        self.grid[below_body].item = Item::BodyBag;
+                    }
+
+                    return;
+                }
+
                 if self.inventory != Item::Knife {
                     return;
                 }
@@ -453,6 +494,18 @@ fn update(mut state: GameState) -> GameState {
                             asset(vec2(13, 0), location).draw();
                             asset(vec2(14, 0), location).draw();
                             asset(vec2(15, 0), location).draw();
+                            asset(vec2(16, 0), location).draw();
+                        }
+                        BodyLevel::Five => {
+                            asset(vec2(14, 0), location).draw();
+                            asset(vec2(15, 0), location).draw();
+                            asset(vec2(16, 0), location).draw();
+                        }
+                        BodyLevel::Six => {
+                            asset(vec2(15, 0), location).draw();
+                            asset(vec2(16, 0), location).draw();
+                        }
+                        BodyLevel::Seven => {
                             asset(vec2(16, 0), location).draw();
                         }
                     }
