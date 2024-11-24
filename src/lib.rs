@@ -1,5 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
 
+mod tiles;
+
 use std::collections::HashSet;
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
@@ -80,26 +82,8 @@ impl std::ops::Add<IVec2> for Vec2 {
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum TileBackground {
-    Black,
-    White,
-}
-
-impl TileBackground {
-    fn flip(self) -> Self {
-        match self {
-            TileBackground::Black => TileBackground::White,
-            TileBackground::White => TileBackground::Black,
-        }
-    }
-}
-
-impl From<&TileBackground> for u32 {
-    fn from(value: &TileBackground) -> Self {
-        match value {
-            TileBackground::Black => 0x111111ff,
-            TileBackground::White => 0xffffffff,
-        }
-    }
+    Floor(Vec2),
+    Wall(Vec2),
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
@@ -186,17 +170,6 @@ struct Tile {
     blood_level: BloodLevel,
 }
 
-impl Tile {
-    fn from_background(background: TileBackground) -> Tile {
-        Tile {
-            background,
-            item: Item::None,
-            player: false,
-            blood_level: BloodLevel::None,
-        }
-    }
-}
-
 enum Parity {
     Even,
     Odd,
@@ -217,28 +190,7 @@ struct Grid(Vec<Vec<Tile>>);
 
 impl Grid {
     fn new() -> Self {
-        Grid(
-            (0..20)
-                .map(|x| {
-                    let start_with = if matches!(Parity::from(x), Parity::Even) {
-                        TileBackground::Black
-                    } else {
-                        TileBackground::White
-                    };
-
-                    (0..20)
-                        .map(|y| {
-                            let parity = Parity::from(y);
-
-                            match parity {
-                                Parity::Even => Tile::from_background(start_with.flip()),
-                                Parity::Odd => Tile::from_background(start_with),
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>(),
-        )
+        Grid(tiles::create_level_0())
     }
 
     fn iter(&self) -> std::slice::Iter<'_, Vec<Tile>> {
@@ -348,8 +300,8 @@ impl Default for GameState {
         let mut grid = Grid::new();
 
         grid[vec2(0, 0)].player = true;
-        grid[vec2(3, 3)].item = Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME);
-        grid[vec2(2, 1)].item = Item::Knife;
+        // grid[vec2(3, 3)].item = Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME);
+        // grid[vec2(2, 1)].item = Item::Knife;
 
         GameState {
             grid,
@@ -437,13 +389,14 @@ fn update(mut state: GameState) -> GameState {
     state.grid.iter().enumerate().for_each(|(row_index, row)| {
         row.iter().enumerate().for_each(|(column_index, cell)| {
             let location = vec2(row_index, column_index);
-            rect!(
-                w = CELL_SIZE,
-                h = CELL_SIZE,
-                x = CELL_SIZE * row_index,
-                y = CELL_SIZE * column_index,
-                color = u32::from(&cell.background)
-            );
+            asset(
+                match cell.background {
+                    TileBackground::Floor(sprite) => sprite,
+                    TileBackground::Wall(sprite) => sprite,
+                },
+                location,
+            )
+            .draw();
 
             if cell.blood_level != BloodLevel::None {
                 match cell.blood_level {
