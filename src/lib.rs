@@ -451,12 +451,17 @@ impl GameState {
 
                     if *progress <= 0 {
                         self.inventory = Item::None;
-                        let Some(new_level) = level.lower() else {
-                            self.grid[in_front_of_player].item = Item::None;
-                            return;
-                        };
-                        self.grid[in_front_of_player].item =
-                            Item::Body(new_level, BODY_CHOPPING_TIME);
+
+                        match level.lower() {
+                            Some(new_level) => {
+                                self.grid[in_front_of_player].item =
+                                    Item::Body(new_level, BODY_CHOPPING_TIME);
+                            }
+                            None => {
+                                self.grid[in_front_of_player].item = Item::None;
+                            }
+                        }
+
                         let below_body = in_front_of_player + ivec2(0, 1);
                         self.grid[below_body].item = Item::BodyBag;
                     }
