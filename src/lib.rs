@@ -57,12 +57,6 @@ const fn ivec2(x: isize, y: isize) -> IVec2 {
     IVec2 { x, y }
 }
 
-impl Vec2 {
-    fn new() -> Self {
-        Default::default()
-    }
-}
-
 impl std::ops::AddAssign<IVec2> for Vec2 {
     fn add_assign(&mut self, rhs: IVec2) {
         self.x = ((self.x as isize) + rhs.x) as usize;
@@ -112,6 +106,11 @@ enum Item {
     None,
     Body(BodyLevel, isize),
     Knife,
+    Sponge,
+    Bleach,
+    Bag,
+    BagRoll,
+    BodyBag,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
@@ -251,8 +250,11 @@ impl GameState {
     fn move_player(&mut self, direction: Direction) {
         let previous_position = self.character_position;
         self.facing = direction;
-        self.character_position += IVec2::from(direction);
-        let new_position = self.character_position;
+        let new_position = self.character_position + IVec2::from(direction);
+        if let TileBackground::Wall(_) = self.grid[new_position].background {
+            return;
+        }
+        self.character_position = new_position;
 
         if let Item::Body(_, _) = self.grid[new_position].item {
             self.grid[new_position].blood_level = BloodLevel::Venti;
@@ -287,10 +289,22 @@ impl GameState {
                         Item::Body(level.lower(), BODY_CHOPPING_TIME);
                 }
             }
-            Item::Knife => {
-                self.inventory = Item::Knife;
+            item @ (Item::Knife | Item::Sponge | Item::Bleach | Item::Bag) => {
+                if self.inventory != Item::None {
+                    return;
+                }
+
+                self.inventory = *item;
                 self.grid[in_front_of_player].item = Item::None;
             }
+            Item::BagRoll => {
+                if self.inventory != Item::None {
+                    return;
+                }
+
+                self.inventory = Item::Bag;
+            }
+            Item::BodyBag => todo!(),
         }
     }
 }
@@ -299,7 +313,8 @@ impl Default for GameState {
     fn default() -> Self {
         let mut grid = Grid::new();
 
-        grid[vec2(0, 0)].player = true;
+        let character_position = vec2(5, 5);
+        grid[character_position].player = true;
         // grid[vec2(3, 3)].item = Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME);
         // grid[vec2(2, 1)].item = Item::Knife;
 
@@ -308,7 +323,7 @@ impl Default for GameState {
             inventory: Item::None,
             blood_on_boots: BloodLevel::None,
             facing: Direction::Down,
-            character_position: Vec2::new(),
+            character_position,
             disable_move_until: 0,
             last_frame_directions: HashSet::new(),
         }
@@ -448,6 +463,14 @@ fn update(mut state: GameState) -> GameState {
                     progress(location, (prgrss as f32) / (BODY_CHOPPING_TIME as f32));
                 }
                 Item::Knife => asset(vec2(6, 2), location).draw(),
+                Item::Sponge => asset(vec2(7, 2), location).draw(),
+                Item::Bleach => asset(vec2(4, 2), location).draw(),
+                Item::Bag => asset(vec2(9, 3), location).draw(),
+                Item::BagRoll => asset(vec2(9, 2), location).draw(),
+                Item::BodyBag => {
+                    asset(vec2(8, 2), location + ivec2(0, 1)).draw();
+                    asset(vec2(8, 3), location).draw()
+                }
             }
 
             if cell.player {

@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{collections::HashSet, fmt::Display, fs::File};
+use std::{collections::HashSet, fs::File};
 
 use serde::Deserialize;
 use serde_json::{self};
@@ -68,16 +68,40 @@ struct Vec2 {
     y: usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 enum TileBackground {
+    #[default]
     None,
     Wall(Vec2),
     Floor(Vec2),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
+enum Item {
+    #[default]
+    None,
+    Bleach,
+    Knife,
+    Sponge,
+    BagRoll,
+    BodyBag,
+    Bag,
+}
+
+#[derive(Clone, Debug, Default)]
+enum BloodLevel {
+    #[default]
+    None,
+    Tall,
+    Grande,
+    Venti,
+}
+
+#[derive(Clone, Debug, Default)]
 struct Tile {
     background: TileBackground,
+    item: Item,
+    blood_level: BloodLevel,
 }
 
 fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
@@ -93,12 +117,29 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                         TileBackground::Floor(Vec2 { x, y }) => format!("Floor(vec2({x}, {y}))"),
                     };
 
+                    let item = match tile.item {
+                        Item::None => "None".to_string(),
+                        Item::Bleach => "Bleach".to_string(),
+                        Item::Knife => "Knife".to_string(),
+                        Item::Sponge => "Sponge".to_string(),
+                        Item::BagRoll => "BagRoll".to_string(),
+                        Item::BodyBag => "BodyBag".to_string(),
+                        Item::Bag => "Bag".to_string(),
+                    };
+
+                    let blood_level = match tile.blood_level {
+                        BloodLevel::None => "None".to_string(),
+                        BloodLevel::Tall => "Tall".to_string(),
+                        BloodLevel::Grande => "Grande".to_string(),
+                        BloodLevel::Venti => "Venti".to_string(),
+                    };
+
                     format!(
                         "Tile {{
                     background: TileBackground::{background},
-                    item: Item::None,
+                    item: Item::{item},
                     player: false,
-                    blood_level: BloodLevel::None
+                    blood_level: BloodLevel::{blood_level}
                 }}"
                     )
                 })
@@ -135,28 +176,77 @@ fn main() {
                 .iter()
                 .find(|e| e.tile_ids.contains(&tile.tile));
 
+            let custom_data = ldtk.defs.tilesets[0]
+                .custom_data
+                .iter()
+                .find(|e| e.tile_id == tile.tile);
+
+            let (x, y) = (tile.position.0 / 16, tile.position.1 / 16);
+
+            if grid.len() < x + 1 {
+                grid.extend(std::iter::repeat_n(Vec::new(), x + 1 - grid.len()));
+            }
+
+            let column = &mut grid[x];
+
+            if column.len() < y + 1 {
+                column.extend(std::iter::repeat_n(
+                    Default::default(),
+                    y + 1 - column.len(),
+                ));
+            }
+
+            if let Some(custom_data) = custom_data {
+                let data = custom_data.data.as_str();
+                let prev = std::mem::take(&mut column[y]);
+
+                column[y] = match data {
+                    "BLOOD_2" => Tile {
+                        blood_level: BloodLevel::Grande,
+                        ..prev
+                    },
+                    "BLOOD_1" => Tile {
+                        blood_level: BloodLevel::Tall,
+                        ..prev
+                    },
+                    "BLOOD_3" => Tile {
+                        blood_level: BloodLevel::Venti,
+                        ..prev
+                    },
+                    "BLEACH" => Tile {
+                        item: Item::Bleach,
+                        ..prev
+                    },
+                    "KNIFE" => Tile {
+                        item: Item::Knife,
+                        ..prev
+                    },
+                    "SPONGE" => Tile {
+                        item: Item::Sponge,
+                        ..prev
+                    },
+                    "BAG_ROLL" => Tile {
+                        item: Item::BagRoll,
+                        ..prev
+                    },
+                    "BODY_BAG" => Tile {
+                        item: Item::BodyBag,
+                        ..prev
+                    },
+                    "BAG" => Tile {
+                        item: Item::Bag,
+                        ..prev
+                    },
+                    value => panic!("Unknown item {value}"),
+                }
+            }
+
             let Some(tag) = tag else {
                 return;
             };
 
-            let (x, y) = (tile.position.0 / 16, tile.position.1 / 16);
-
             if tag.enum_value_id == "Wall" || tag.enum_value_id == "Floor" {
-                if grid.len() < x + 1 {
-                    grid.extend(std::iter::repeat_n(Vec::new(), x + 1 - grid.len()));
-                }
-
-                let column = &mut grid[x];
-
-                if column.len() < y + 1 {
-                    column.extend(std::iter::repeat_n(
-                        Tile {
-                            background: TileBackground::None,
-                        },
-                        y + 1 - column.len(),
-                    ));
-                }
-
+                let prev = std::mem::take(&mut column[y]);
                 column[y] = Tile {
                     background: if tag.enum_value_id == "Wall" {
                         TileBackground::Wall(Vec2 {
@@ -169,6 +259,7 @@ fn main() {
                             y: tile.source.1 / 16,
                         })
                     },
+                    ..prev
                 };
             }
         });

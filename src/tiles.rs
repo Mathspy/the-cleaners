@@ -109,7 +109,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
             },
             Tile {
                 background: TileBackground::Wall(vec2(11, 0)),
-                item: Item::None,
+                item: Item::Sponge,
                 player: false,
                 blood_level: BloodLevel::None,
             },
@@ -123,13 +123,13 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 background: TileBackground::Floor(vec2(7, 4)),
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::None,
+                blood_level: BloodLevel::Tall,
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::None,
+                blood_level: BloodLevel::Tall,
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
@@ -227,13 +227,13 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 background: TileBackground::Floor(vec2(3, 3)),
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::None,
+                blood_level: BloodLevel::Tall,
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::None,
+                blood_level: BloodLevel::Grande,
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
@@ -331,7 +331,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 background: TileBackground::Floor(vec2(3, 3)),
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::None,
+                blood_level: BloodLevel::Venti,
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
@@ -605,7 +605,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 5)),
-                item: Item::None,
+                item: Item::Bleach,
                 player: false,
                 blood_level: BloodLevel::None,
             },
@@ -1291,7 +1291,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
             },
             Tile {
                 background: TileBackground::Wall(vec2(5, 2)),
-                item: Item::None,
+                item: Item::Knife,
                 player: false,
                 blood_level: BloodLevel::None,
             },
@@ -1327,7 +1327,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 2)),
-                item: Item::None,
+                item: Item::BagRoll,
                 player: false,
                 blood_level: BloodLevel::None,
             },
@@ -1363,7 +1363,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
             },
             Tile {
                 background: TileBackground::Wall(vec2(8, 3)),
-                item: Item::None,
+                item: Item::BodyBag,
                 player: false,
                 blood_level: BloodLevel::None,
             },
