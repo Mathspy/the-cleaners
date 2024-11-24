@@ -1,5 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
+use std::collections::HashSet;
 use turbo::borsh::{self, *};
 use turbo::prelude::*;
 
@@ -218,12 +219,13 @@ struct GameState {
 
     // Restrictions:
     disable_move_until: usize,
+    last_frame_directions: HashSet<Direction>,
 
     // Performance:
     character_position: Vec2,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, PartialOrd, Eq, Hash, Debug, Clone, Copy)]
 enum Direction {
     Up,
     Down,
@@ -284,6 +286,7 @@ impl Default for GameState {
             facing: Direction::Down,
             character_position: Vec2::new(),
             disable_move_until: 0,
+            last_frame_directions: HashSet::new(),
         }
     }
 }
@@ -392,26 +395,34 @@ fn update(mut state: GameState) -> GameState {
     let pad = gamepad(0);
 
     if state.disable_move_until <= tick() {
-        let mut moved = false;
+        let mut pressed = HashSet::new();
         if pad.up.pressed() {
-            log!("UP IS CLICKED");
-            state.move_player(Direction::Up);
-            moved = true;
+            pressed.insert(Direction::Up);
         }
         if pad.down.pressed() {
-            state.move_player(Direction::Down);
-            moved = true;
+            pressed.insert(Direction::Down);
         }
         if pad.left.pressed() {
-            state.move_player(Direction::Left);
-            moved = true;
+            pressed.insert(Direction::Left);
         }
         if pad.right.pressed() {
-            state.move_player(Direction::Right);
-            moved = true;
+            pressed.insert(Direction::Right);
         }
 
-        if moved {
+        let direction = if pressed.len() >= 2 {
+            let mut difference = pressed.difference(&state.last_frame_directions);
+
+            let direction = difference.next();
+
+            Some(direction.copied().unwrap_or(state.facing))
+        } else if pressed.len() == 1 {
+            Some(pressed.into_iter().next().expect("unreachable"))
+        } else {
+            None
+        };
+
+        if let Some(direction) = direction {
+            state.move_player(direction);
             state.disable_move_until = tick() + FRAMES_BETWEEN_MOVES;
         }
     }
