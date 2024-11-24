@@ -316,6 +316,7 @@ struct Tile {
     background: TileBackground,
     item: Item,
     furniture: Furniture,
+    foreground: Option<Vec2>,
     player: bool,
     drop_point: bool,
     blood_level: BloodLevel,
@@ -340,8 +341,10 @@ impl From<u32> for Parity {
 struct Grid(Vec<Vec<Tile>>);
 
 impl Grid {
-    fn new() -> Self {
-        Grid(tiles::create_level_0())
+    fn new() -> (Self, Vec2) {
+        let (grid, character_position) = tiles::create_level_0();
+
+        (Grid(grid), character_position)
     }
 
     fn iter(&self) -> std::slice::Iter<'_, Vec<Tile>> {
@@ -541,12 +544,7 @@ impl GameState {
 
 impl Default for GameState {
     fn default() -> Self {
-        let mut grid = Grid::new();
-
-        let character_position = vec2(5, 5);
-        grid[character_position].player = true;
-        // grid[vec2(3, 3)].item = Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME);
-        // grid[vec2(2, 1)].item = Item::Knife;
+        let (grid, character_position) = Grid::new();
 
         GameState {
             grid,
@@ -658,6 +656,10 @@ fn update(mut state: GameState) -> GameState {
                     Direction::Right => (character_sprite_locations.right, false),
                 };
                 asset(sprite, location).flip_x(flip).draw();
+            }
+
+            if let Some(foreground) = cell.foreground {
+                asset(foreground, location).draw();
             }
 
             let in_front_of_player = state.in_front_of_player();

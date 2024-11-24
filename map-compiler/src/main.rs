@@ -62,7 +62,7 @@ struct Ldtk {
     levels: Vec<Level>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct Vec2 {
     x: usize,
     y: usize,
@@ -102,12 +102,16 @@ enum BloodLevel {
 struct Tile {
     background: TileBackground,
     furniture: TileBackground,
+    foreground: Option<Vec2>,
     item: Item,
     blood_level: BloodLevel,
     drop_point: bool,
+    player: bool,
 }
 
 fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
+    let mut character_position = None;
+
     let columns = tiles
         .iter()
         .enumerate()
@@ -126,6 +130,12 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                         TileBackground::None => "None".to_string(),
                         TileBackground::Wall(Vec2 { x, y }) => format!("Wall(vec2({x}, {y}))"),
                         TileBackground::Floor(Vec2 { x, y }) => format!("Floor(vec2({x}, {y}))"),
+                    };
+
+                    let foreground = if let Some(foreground) = &tile.foreground {
+                        format!("Some(vec2({x}, {y}))", x = foreground.x, y = foreground.y)
+                    } else {
+                        "None".to_string()
                     };
 
                     let item = match tile.item {
@@ -147,13 +157,19 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                     };
 
                     let drop_point = tile.drop_point;
+                    let player = tile.player;
+
+                    if player {
+                        character_position = Some(format!("vec2({x}, {y})"));
+                    }
 
                     format!(
                         "Tile {{
                     background: TileBackground::{background},
                     furniture: Furniture::{furniture},
+                    foreground: {foreground},
                     item: Item::{item},
-                    player: false,
+                    player: {player},
                     blood_level: BloodLevel::{blood_level},
                     drop_point: {drop_point},
                 }}"
@@ -165,14 +181,18 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
         })
         .join(",");
 
+    let Some(character_position) = character_position else {
+        panic!("No SPAWN point");
+    };
+
     format!(
         "
-use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture, CLEANING_TIME}};
+use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture, CLEANING_TIME, Vec2}};
         
-pub fn create_level_{level}() -> Vec<Vec<Tile>> {{
-    vec![
+pub fn create_level_{level}() -> (Vec<Vec<Tile>>, Vec2) {{
+    (vec![
         {columns}
-    ]
+    ], {character_position})
 }}
 "
     )
@@ -263,6 +283,10 @@ fn main() {
                         drop_point: true,
                         ..prev
                     },
+                    "SPAWN" => Tile {
+                        player: true,
+                        ..prev
+                    },
                     value => panic!("Unknown item {value}"),
                 }
             }
@@ -270,6 +294,17 @@ fn main() {
             if tags.is_empty() {
                 return;
             };
+
+            if tags.contains("Foreground") {
+                let prev = std::mem::take(&mut column[y]);
+                column[y] = Tile {
+                    foreground: Some(Vec2 {
+                        x: tile.source.0 / 16,
+                        y: tile.source.1 / 16,
+                    }),
+                    ..prev
+                };
+            }
 
             if tags.contains("Wall") || tags.contains("Floor") {
                 let prev = std::mem::take(&mut column[y]);
