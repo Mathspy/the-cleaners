@@ -371,6 +371,9 @@ impl GameState {
                     *progress -= 1;
 
                     if *progress <= 0 {
+                        self.inventory = Item::None;
+                        self.grid[in_front_of_player].item =
+                            Item::Body(level.lower(), BODY_CHOPPING_TIME);
                         let below_body = in_front_of_player + ivec2(0, 1);
                         self.grid[below_body].item = Item::BodyBag;
                     }
