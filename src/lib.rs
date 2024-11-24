@@ -351,15 +351,10 @@ fn update(mut state: GameState) -> GameState {
                 color = u32::from(&cell.background)
             );
 
-            match cell.item {
-                Item::None => {}
-                Item::Body => asset(vec2(8, 0), location).draw(),
-            }
-
             if cell.blood_level != BloodLevel::None {
                 match cell.blood_level {
                     BloodLevel::None => unreachable!(),
-                    BloodLevel::Tall => asset(vec2(7, 1), location).opacity(0.3).draw(),
+                    BloodLevel::Tall => asset(vec2(7, 1), location).opacity(0.5).draw(),
                     BloodLevel::Grande => {
                         let diameter = match cell.blood_level {
                             BloodLevel::None => unreachable!(),
@@ -375,8 +370,13 @@ fn update(mut state: GameState) -> GameState {
                             color = 0xff000077
                         );
                     }
-                    BloodLevel::Venti => asset(vec2(5, 1), location).opacity(0.3).draw(),
+                    BloodLevel::Venti => asset(vec2(5, 1), location).opacity(0.5).draw(),
                 };
+            }
+
+            match cell.item {
+                Item::None => {}
+                Item::Body => asset(vec2(8, 0), location).draw(),
             }
 
             if cell.player {
