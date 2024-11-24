@@ -369,10 +369,6 @@ impl Asset {
         );
     }
 
-    fn opacity(self, opacity: f32) -> Asset {
-        Asset { opacity, ..self }
-    }
-
     fn flip_x(self, flip_x: bool) -> Asset {
         Asset { flip_x, ..self }
     }
@@ -416,7 +412,7 @@ fn update(mut state: GameState) -> GameState {
             if cell.blood_level != BloodLevel::None {
                 match cell.blood_level {
                     BloodLevel::None => unreachable!(),
-                    BloodLevel::Tall => asset(vec2(7, 1), location).opacity(0.5).draw(),
+                    BloodLevel::Tall => asset(vec2(7, 1), location).draw(),
                     BloodLevel::Grande => {
                         let diameter = match cell.blood_level {
                             BloodLevel::None => unreachable!(),
@@ -432,7 +428,7 @@ fn update(mut state: GameState) -> GameState {
                             color = 0xff000077
                         );
                     }
-                    BloodLevel::Venti => asset(vec2(5, 1), location).opacity(0.5).draw(),
+                    BloodLevel::Venti => asset(vec2(5, 1), location).draw(),
                 };
             }
 
