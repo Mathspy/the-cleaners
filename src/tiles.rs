@@ -1,5 +1,6 @@
 use crate::{
     vec2, BloodLevel, BodyLevel, Furniture, Item, Tile, TileBackground, BODY_CHOPPING_TIME,
+    CLEANING_TIME,
 };
 
 pub fn create_level_0() -> Vec<Vec<Tile>> {
@@ -145,14 +146,14 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 furniture: Furniture::None,
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::Tall,
+                blood_level: BloodLevel::Tall(CLEANING_TIME),
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
                 furniture: Furniture::None,
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::Tall,
+                blood_level: BloodLevel::Tall(CLEANING_TIME),
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
@@ -266,14 +267,14 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 furniture: Furniture::None,
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::Tall,
+                blood_level: BloodLevel::Tall(CLEANING_TIME),
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
                 furniture: Furniture::None,
                 item: Item::None,
                 player: false,
-                blood_level: BloodLevel::Grande,
+                blood_level: BloodLevel::Grande(CLEANING_TIME),
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),
@@ -387,7 +388,7 @@ pub fn create_level_0() -> Vec<Vec<Tile>> {
                 furniture: Furniture::None,
                 item: Item::Body(BodyLevel::Start, BODY_CHOPPING_TIME),
                 player: false,
-                blood_level: BloodLevel::Venti,
+                blood_level: BloodLevel::Venti(CLEANING_TIME),
             },
             Tile {
                 background: TileBackground::Floor(vec2(3, 3)),

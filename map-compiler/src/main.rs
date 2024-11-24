@@ -140,9 +140,9 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
 
                     let blood_level = match tile.blood_level {
                         BloodLevel::None => "None".to_string(),
-                        BloodLevel::Tall => "Tall".to_string(),
-                        BloodLevel::Grande => "Grande".to_string(),
-                        BloodLevel::Venti => "Venti".to_string(),
+                        BloodLevel::Tall => "Tall(CLEANING_TIME)".to_string(),
+                        BloodLevel::Grande => "Grande(CLEANING_TIME)".to_string(),
+                        BloodLevel::Venti => "Venti(CLEANING_TIME)".to_string(),
                     };
 
                     format!(
@@ -163,7 +163,7 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
 
     format!(
         "
-use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture}};
+use crate::{{Tile, TileBackground, Item, vec2, BloodLevel, BodyLevel, BODY_CHOPPING_TIME, Furniture, CLEANING_TIME}};
         
 pub fn create_level_{level}() -> Vec<Vec<Tile>> {{
     vec![

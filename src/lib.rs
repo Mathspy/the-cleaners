@@ -9,6 +9,7 @@ use turbo::prelude::*;
 const CELL_SIZE: usize = 16;
 const FRAMES_BETWEEN_MOVES: usize = 16;
 const BODY_CHOPPING_TIME: isize = 100;
+const CLEANING_TIME: isize = 100;
 const PROGRESS_BAR_SIZE: usize = CELL_SIZE - 4;
 
 struct CharacterSpriteLocations {
@@ -159,6 +160,19 @@ impl Item {
             Item::BodyBag => true,
         }
     }
+
+    fn is_cleaning_item(&self) -> bool {
+        match self {
+            Item::None
+            | Item::Body(_, _)
+            | Item::Knife
+            | Item::Bag
+            | Item::BagRoll
+            | Item::BodyBag => false,
+            Item::Sponge | Item::Bleach => true,
+        }
+    }
+
     fn draw(&self, location: Vec2, flip: bool) {
         match self {
             Item::None => {}
@@ -216,9 +230,9 @@ impl Item {
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
 enum BloodLevel {
     None,
-    Tall,
-    Grande,
-    Venti,
+    Tall(isize),
+    Grande(isize),
+    Venti(isize),
 }
 
 impl BloodLevel {
@@ -226,18 +240,18 @@ impl BloodLevel {
     fn increment(&mut self) -> bool {
         match self {
             BloodLevel::None => {
-                *self = BloodLevel::Tall;
+                *self = BloodLevel::Tall(CLEANING_TIME);
                 true
             }
-            BloodLevel::Tall => {
-                *self = BloodLevel::Grande;
+            BloodLevel::Tall(_) => {
+                *self = BloodLevel::Grande(CLEANING_TIME);
                 true
             }
-            BloodLevel::Grande => {
-                *self = BloodLevel::Venti;
+            BloodLevel::Grande(_) => {
+                *self = BloodLevel::Venti(CLEANING_TIME);
                 true
             }
-            BloodLevel::Venti => false,
+            BloodLevel::Venti(_) => false,
         }
     }
 
@@ -245,19 +259,43 @@ impl BloodLevel {
     fn decrement(&mut self) -> bool {
         match self {
             BloodLevel::None => false,
-            BloodLevel::Tall => {
+            BloodLevel::Tall(_) => {
                 *self = BloodLevel::None;
                 true
             }
-            BloodLevel::Grande => {
-                *self = BloodLevel::Tall;
+            BloodLevel::Grande(_) => {
+                *self = BloodLevel::Tall(CLEANING_TIME);
                 true
             }
-            BloodLevel::Venti => {
-                *self = BloodLevel::Grande;
+            BloodLevel::Venti(_) => {
+                *self = BloodLevel::Grande(CLEANING_TIME);
                 true
             }
         }
+    }
+
+    fn draw(&self, location: Vec2) {
+        match self {
+            BloodLevel::None => unreachable!(),
+            level @ (BloodLevel::Tall(prgrss)
+            | BloodLevel::Grande(prgrss)
+            | BloodLevel::Venti(prgrss)) => {
+                if *prgrss != CLEANING_TIME {
+                    progress(location, (*prgrss as f32) / (CLEANING_TIME as f32));
+                }
+
+                asset(
+                    match level {
+                        BloodLevel::None => unreachable!(),
+                        BloodLevel::Tall(_) => vec2(7, 1),
+                        BloodLevel::Grande(_) => vec2(5, 1),
+                        BloodLevel::Venti(_) => vec2(6, 1),
+                    },
+                    location,
+                )
+                .draw()
+            }
+        };
     }
 }
 
@@ -364,8 +402,8 @@ impl GameState {
         self.character_position = new_position;
 
         if let Item::Body(_, _) = self.grid[new_position].item {
-            self.grid[new_position].blood_level = BloodLevel::Venti;
-            self.blood_on_boots = BloodLevel::Venti;
+            self.grid[new_position].blood_level = BloodLevel::Venti(CLEANING_TIME);
+            self.blood_on_boots = BloodLevel::Venti(CLEANING_TIME);
         }
 
         if self.blood_on_boots != BloodLevel::None {
@@ -385,6 +423,21 @@ impl GameState {
 
     fn interact(&mut self) {
         let in_front_of_player = self.in_front_of_player();
+
+        if self.inventory.is_cleaning_item() {
+            match &mut self.grid[in_front_of_player].blood_level {
+                BloodLevel::None => {}
+                BloodLevel::Tall(progress)
+                | BloodLevel::Grande(progress)
+                | BloodLevel::Venti(progress) => {
+                    *progress -= 1;
+
+                    if *progress <= 0 {
+                        self.grid[in_front_of_player].blood_level.decrement();
+                    }
+                }
+            }
+        }
 
         match &mut self.grid[in_front_of_player].item {
             Item::None => {}
@@ -556,26 +609,7 @@ fn update(mut state: GameState) -> GameState {
             .draw();
 
             if cell.blood_level != BloodLevel::None {
-                match cell.blood_level {
-                    BloodLevel::None => unreachable!(),
-                    BloodLevel::Tall => asset(vec2(7, 1), location).draw(),
-                    BloodLevel::Grande => {
-                        let diameter = match cell.blood_level {
-                            BloodLevel::None => unreachable!(),
-                            BloodLevel::Tall => 4,
-                            BloodLevel::Grande => 8,
-                            BloodLevel::Venti => 14,
-                        };
-
-                        circ!(
-                            x = CELL_SIZE * row_index + CELL_SIZE / 2 - diameter / 2,
-                            y = CELL_SIZE * column_index + CELL_SIZE / 2 - diameter / 2,
-                            d = diameter,
-                            color = 0xff000077
-                        );
-                    }
-                    BloodLevel::Venti => asset(vec2(5, 1), location).draw(),
-                };
+                cell.blood_level.draw(location);
             }
 
             if let Furniture::Floor(sprite) | Furniture::Wall(sprite) = cell.furniture {
