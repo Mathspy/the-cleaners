@@ -317,6 +317,7 @@ struct Tile {
     item: Item,
     furniture: Furniture,
     player: bool,
+    drop_point: bool,
     blood_level: BloodLevel,
 }
 
@@ -523,6 +524,11 @@ impl GameState {
 
     fn drop(&mut self) {
         let in_front_of_player = self.in_front_of_player();
+
+        if self.grid[in_front_of_player].drop_point && self.inventory == Item::BodyBag {
+            self.inventory = Item::None;
+            return;
+        }
 
         if self.grid[in_front_of_player].item != Item::None {
             return;

@@ -104,6 +104,7 @@ struct Tile {
     furniture: TileBackground,
     item: Item,
     blood_level: BloodLevel,
+    drop_point: bool,
 }
 
 fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
@@ -145,13 +146,16 @@ fn tiles_file(tiles: &[Vec<Tile>], level: usize) -> String {
                         BloodLevel::Venti => "Venti(CLEANING_TIME)".to_string(),
                     };
 
+                    let drop_point = tile.drop_point;
+
                     format!(
                         "Tile {{
                     background: TileBackground::{background},
                     furniture: Furniture::{furniture},
                     item: Item::{item},
                     player: false,
-                    blood_level: BloodLevel::{blood_level}
+                    blood_level: BloodLevel::{blood_level},
+                    drop_point: {drop_point},
                 }}"
                     )
                 })
@@ -253,6 +257,10 @@ fn main() {
                     },
                     "BODY" => Tile {
                         item: Item::Body,
+                        ..prev
+                    },
+                    "DROP_POINT" => Tile {
+                        drop_point: true,
                         ..prev
                     },
                     value => panic!("Unknown item {value}"),
