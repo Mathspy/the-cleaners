@@ -11,7 +11,7 @@
 	"iid": "5839a0a0-9b00-11ef-b6be-33de78680ad1",
 	"jsonVersion": "1.5.3",
 	"appBuildId": 473703,
-	"nextUid": 11,
+	"nextUid": 16,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "Free",
@@ -262,6 +262,8 @@
 					463,
 					464,
 					465,
+					676,
+					677,
 					680,
 					681,
 					683,
@@ -274,6 +276,10 @@
 					1124,
 					1125,
 					1126,
+					1344,
+					1345,
+					1346,
+					1347,
 					1456,
 					1457,
 					1458,
@@ -304,6 +310,7 @@
 					337,
 					338,
 					339,
+					342,
 					347,
 					452,
 					453,
@@ -324,10 +331,9 @@
 					673,
 					674,
 					675,
-					676,
-					677,
 					678,
 					679,
+					682,
 					784,
 					785,
 					786,
@@ -347,14 +353,11 @@
 					1232,
 					1233,
 					1234,
-					1235,
-					1344,
-					1345,
-					1346,
-					1347
+					1235
 				]
-			}, { "enumValueId": "Entity", "tileIds": [8,228,230,231,233,344,345] } ],
+			}, { "enumValueId": "Entity", "tileIds": [8,228,230,231,233,344,345] }, { "enumValueId": "Furniture", "tileIds": [9,10,11,12,116,120,121,122,123,124,126,127,229,234,340,341,346,460,461,462,463,464,465,572,573,683,684,685,686] } ],
 			"customData": [
+				{ "tileId": 8, "data": "BODY" },
 				{ "tileId": 117, "data": "BLOOD_2" },
 				{ "tileId": 118, "data": "BLOOD_3" },
 				{ "tileId": 119, "data": "BLOOD_1" },
@@ -396,7 +399,8 @@
 	], "enums": [{ "identifier": "Type", "uid": 6, "values": [
 		{ "id": "Wall", "tileRect": null, "color": 12470831 },
 		{ "id": "Floor", "tileRect": null, "color": 14120515 },
-		{ "id": "Entity", "tileRect": null, "color": 15389866 }
+		{ "id": "Entity", "tileRect": null, "color": 15389866 },
+		{ "id": "Furniture", "tileRect": null, "color": 14984818 }
 	], "iconTilesetUid": 2, "externalRelPath": null, "externalFileChecksum": null, "tags": [] }], "externalEnums": [], "levelFields": [] },
 	"levels": [
 		{
