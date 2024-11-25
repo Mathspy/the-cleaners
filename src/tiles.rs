@@ -154,7 +154,7 @@ pub fn create_level_0() -> (Vec<Vec<Tile>>, Vec2) {
             ],
             vec![
                 Tile {
-                    background: TileBackground::Floor(vec2(0, 8)),
+                    background: TileBackground::Wall(vec2(0, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -300,7 +300,7 @@ pub fn create_level_0() -> (Vec<Vec<Tile>>, Vec2) {
             ],
             vec![
                 Tile {
-                    background: TileBackground::Floor(vec2(0, 8)),
+                    background: TileBackground::Wall(vec2(0, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -592,7 +592,7 @@ pub fn create_level_0() -> (Vec<Vec<Tile>>, Vec2) {
             ],
             vec![
                 Tile {
-                    background: TileBackground::Floor(vec2(0, 8)),
+                    background: TileBackground::Wall(vec2(0, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -602,7 +602,7 @@ pub fn create_level_0() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 4)),
-                    furniture: Furniture::None,
+                    furniture: Furniture::Floor(vec2(12, 4)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -1887,7 +1887,7 @@ pub fn create_level_0() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 3)),
-                    furniture: Furniture::Wall(vec2(5, 3)),
+                    furniture: Furniture::Wall(vec2(15, 3)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -4874,7 +4874,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -5346,7 +5346,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -5358,7 +5358,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     background: TileBackground::Floor(vec2(7, 4)),
                     furniture: Furniture::Wall(vec2(17, 4)),
                     foreground: None,
-                    item: Item::None,
+                    item: Item::Sponge,
                     player: false,
                     blood_level: BloodLevel::None,
                     drop_point: false,
@@ -5374,7 +5374,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 4)),
-                    furniture: Furniture::Floor(vec2(12, 5)),
+                    furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -5582,7 +5582,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -5610,7 +5610,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 4)),
-                    furniture: Furniture::Wall(vec2(15, 4)),
+                    furniture: Furniture::Floor(vec2(12, 5)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -5818,7 +5818,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -5846,9 +5846,9 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 4)),
-                    furniture: Furniture::None,
+                    furniture: Furniture::Wall(vec2(15, 4)),
                     foreground: None,
-                    item: Item::Sponge,
+                    item: Item::None,
                     player: false,
                     blood_level: BloodLevel::None,
                     drop_point: false,
@@ -6136,7 +6136,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::None,
+                    furniture: Furniture::Wall(vec2(20, 0)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -6372,8 +6372,8 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::Wall(vec2(21, 0)),
-                    foreground: None,
+                    furniture: Furniture::None,
+                    foreground: Some(vec2(21, 0)),
                     item: Item::None,
                     player: false,
                     blood_level: BloodLevel::None,
@@ -7942,7 +7942,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -8178,7 +8178,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -8414,7 +8414,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -8487,7 +8487,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::None,
+                    furniture: Furniture::Wall(vec2(20, 0)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -8723,8 +8723,8 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::Wall(vec2(21, 0)),
-                    foreground: None,
+                    furniture: Furniture::None,
+                    foreground: Some(vec2(21, 0)),
                     item: Item::None,
                     player: false,
                     blood_level: BloodLevel::None,
@@ -8886,7 +8886,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                     drop_point: false,
                 },
                 Tile {
-                    background: TileBackground::Floor(vec2(2, 8)),
+                    background: TileBackground::Wall(vec2(2, 8)),
                     furniture: Furniture::None,
                     foreground: None,
                     item: Item::None,
@@ -10393,7 +10393,7 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::None,
+                    furniture: Furniture::Wall(vec2(20, 0)),
                     foreground: None,
                     item: Item::None,
                     player: false,
@@ -10629,8 +10629,8 @@ pub fn create_level_1() -> (Vec<Vec<Tile>>, Vec2) {
                 },
                 Tile {
                     background: TileBackground::Floor(vec2(7, 6)),
-                    furniture: Furniture::Wall(vec2(21, 0)),
-                    foreground: None,
+                    furniture: Furniture::None,
+                    foreground: Some(vec2(21, 0)),
                     item: Item::None,
                     player: false,
                     blood_level: BloodLevel::None,
