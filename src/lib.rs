@@ -18,26 +18,34 @@ struct CharacterSpriteLocations {
     up: Vec2,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy)]
+enum Character {
+    TheCat,
+    TwoToes,
+    MachineGun,
+    OneEye,
+}
+
 const THE_CAT: CharacterSpriteLocations = CharacterSpriteLocations {
     down: vec2(4, 0),
     right: vec2(4, 5),
     up: vec2(5, 5),
 };
-// const TWO_TOES: CharacterSpriteLocations = CharacterSpriteLocations {
-//     down: vec2(5, 0),
-//     right: vec2(6, 5),
-//     up: vec2(7, 5),
-// };
-// const MACHINE_GUN: CharacterSpriteLocations = CharacterSpriteLocations {
-//     down: vec2(6, 0),
-//     right: vec2(8, 5),
-//     up: vec2(9, 5),
-// };
-// const ONE_EYE: CharacterSpriteLocations = CharacterSpriteLocations {
-//     down: vec2(7, 0),
-//     right: vec2(10, 5),
-//     up: vec2(11, 5),
-// };
+const TWO_TOES: CharacterSpriteLocations = CharacterSpriteLocations {
+    down: vec2(5, 0),
+    right: vec2(6, 5),
+    up: vec2(7, 5),
+};
+const MACHINE_GUN: CharacterSpriteLocations = CharacterSpriteLocations {
+    down: vec2(6, 0),
+    right: vec2(8, 5),
+    up: vec2(9, 5),
+};
+const ONE_EYE: CharacterSpriteLocations = CharacterSpriteLocations {
+    down: vec2(7, 0),
+    right: vec2(10, 5),
+    up: vec2(11, 5),
+};
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone, Copy, Default)]
 struct Vec2 {
@@ -386,6 +394,9 @@ struct LevelState {
 
     // Performance:
     character_position: Vec2,
+
+    // Fun
+    character: Character,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
@@ -599,6 +610,7 @@ impl LevelState {
             character_position: data.1,
             disable_move_until: 0,
             last_frame_directions: HashSet::new(),
+            character: Character::TheCat,
         }
     }
 }
@@ -710,7 +722,12 @@ fn update_level(mut state: LevelState) -> LevelUpdate {
             cell.item.draw(location, false);
 
             if cell.player {
-                let character_sprite_locations = THE_CAT;
+                let character_sprite_locations = match state.character {
+                    Character::TheCat => THE_CAT,
+                    Character::TwoToes => TWO_TOES,
+                    Character::MachineGun => MACHINE_GUN,
+                    Character::OneEye => ONE_EYE,
+                };
                 let (sprite, flip) = match state.facing {
                     Direction::Up => (character_sprite_locations.up, false),
                     Direction::Down => (character_sprite_locations.down, false),
@@ -776,6 +793,15 @@ fn update_level(mut state: LevelState) -> LevelUpdate {
     if pad.b.pressed() {
         if let LevelFinished::Yes = state.drop() {
             return LevelUpdate::NextLevel;
+        }
+    }
+
+    if pad.x.just_pressed() {
+        state.character = match state.character {
+            Character::TheCat => Character::TwoToes,
+            Character::TwoToes => Character::MachineGun,
+            Character::MachineGun => Character::OneEye,
+            Character::OneEye => Character::TheCat,
         }
     }
 
